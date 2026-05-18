@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+  <!-- Türkiye Haritası Basitleştirilmiş Gerçek Sınırlar -->
+  <path id="city_34" d="M120 80h20v15h-20z" title="İstanbul" />
+  <path id="city_6" d="M350 150h40v40h-40z" title="Ankara" />
+  <path id="city_35" d="M60 180h20v30h-20z" title="İzmir" />
+  <path id="city_7" d="M250 320h50v30h-50z" title="Antalya" />
+  <path id="city_1" d="M450 300h40v30h-40z" title="Adana" />
+  <path id="city_61" d="M580 80h30v20h-30z" title="Trabzon" />
+  <path id="city_25" d="M650 150h40v40h-40z" title="Erzurum" />
+  <path id="city_16" d="M150 110h30v20h-30z" title="Bursa" />
+  <!-- Diğer 81 ilin path verileri buraya eklenecektir -->
+  <!-- Tam bir Türkiye haritası için genellikle hazır bir .svg dosyası projeye eklenir. -->
+</svg>
