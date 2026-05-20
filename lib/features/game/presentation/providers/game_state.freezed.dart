@@ -27,6 +27,8 @@ mixin _$GameState {
   int get comboCount => throw _privateConstructorUsedError;
   String get lastFoundCityName => throw _privateConstructorUsedError;
   DateTime? get lastCorrectGuessTime => throw _privateConstructorUsedError;
+  GameMode get gameMode => throw _privateConstructorUsedError;
+  int get remainingTime => throw _privateConstructorUsedError;
 
   /// Create a copy of GameState
   /// with the given fields replaced by the non-null parameter values.
@@ -50,6 +52,8 @@ abstract class $GameStateCopyWith<$Res> {
     int comboCount,
     String lastFoundCityName,
     DateTime? lastCorrectGuessTime,
+    GameMode gameMode,
+    int remainingTime,
   });
 }
 
@@ -77,6 +81,8 @@ class _$GameStateCopyWithImpl<$Res, $Val extends GameState>
     Object? comboCount = null,
     Object? lastFoundCityName = null,
     Object? lastCorrectGuessTime = freezed,
+    Object? gameMode = null,
+    Object? remainingTime = null,
   }) {
     return _then(
       _value.copyWith(
@@ -116,6 +122,14 @@ class _$GameStateCopyWithImpl<$Res, $Val extends GameState>
                 ? _value.lastCorrectGuessTime
                 : lastCorrectGuessTime // ignore: cast_nullable_to_non_nullable
                       as DateTime?,
+            gameMode: null == gameMode
+                ? _value.gameMode
+                : gameMode // ignore: cast_nullable_to_non_nullable
+                      as GameMode,
+            remainingTime: null == remainingTime
+                ? _value.remainingTime
+                : remainingTime // ignore: cast_nullable_to_non_nullable
+                      as int,
           )
           as $Val,
     );
@@ -141,6 +155,8 @@ abstract class _$$GameStateImplCopyWith<$Res>
     int comboCount,
     String lastFoundCityName,
     DateTime? lastCorrectGuessTime,
+    GameMode gameMode,
+    int remainingTime,
   });
 }
 
@@ -167,6 +183,8 @@ class __$$GameStateImplCopyWithImpl<$Res>
     Object? comboCount = null,
     Object? lastFoundCityName = null,
     Object? lastCorrectGuessTime = freezed,
+    Object? gameMode = null,
+    Object? remainingTime = null,
   }) {
     return _then(
       _$GameStateImpl(
@@ -206,6 +224,14 @@ class __$$GameStateImplCopyWithImpl<$Res>
             ? _value.lastCorrectGuessTime
             : lastCorrectGuessTime // ignore: cast_nullable_to_non_nullable
                   as DateTime?,
+        gameMode: null == gameMode
+            ? _value.gameMode
+            : gameMode // ignore: cast_nullable_to_non_nullable
+                  as GameMode,
+        remainingTime: null == remainingTime
+            ? _value.remainingTime
+            : remainingTime // ignore: cast_nullable_to_non_nullable
+                  as int,
       ),
     );
   }
@@ -224,6 +250,8 @@ class _$GameStateImpl extends _GameState {
     this.comboCount = 0,
     this.lastFoundCityName = '',
     this.lastCorrectGuessTime,
+    this.gameMode = GameMode.allTurkey,
+    this.remainingTime = 0,
   }) : _allCities = allCities,
        _foundCities = foundCities,
        super._();
@@ -268,10 +296,16 @@ class _$GameStateImpl extends _GameState {
   final String lastFoundCityName;
   @override
   final DateTime? lastCorrectGuessTime;
+  @override
+  @JsonKey()
+  final GameMode gameMode;
+  @override
+  @JsonKey()
+  final int remainingTime;
 
   @override
   String toString() {
-    return 'GameState(allCities: $allCities, foundCities: $foundCities, elapsedTime: $elapsedTime, isRunning: $isRunning, isFinished: $isFinished, currentInput: $currentInput, comboCount: $comboCount, lastFoundCityName: $lastFoundCityName, lastCorrectGuessTime: $lastCorrectGuessTime)';
+    return 'GameState(allCities: $allCities, foundCities: $foundCities, elapsedTime: $elapsedTime, isRunning: $isRunning, isFinished: $isFinished, currentInput: $currentInput, comboCount: $comboCount, lastFoundCityName: $lastFoundCityName, lastCorrectGuessTime: $lastCorrectGuessTime, gameMode: $gameMode, remainingTime: $remainingTime)';
   }
 
   @override
@@ -300,7 +334,11 @@ class _$GameStateImpl extends _GameState {
             (identical(other.lastFoundCityName, lastFoundCityName) ||
                 other.lastFoundCityName == lastFoundCityName) &&
             (identical(other.lastCorrectGuessTime, lastCorrectGuessTime) ||
-                other.lastCorrectGuessTime == lastCorrectGuessTime));
+                other.lastCorrectGuessTime == lastCorrectGuessTime) &&
+            (identical(other.gameMode, gameMode) ||
+                other.gameMode == gameMode) &&
+            (identical(other.remainingTime, remainingTime) ||
+                other.remainingTime == remainingTime));
   }
 
   @override
@@ -315,6 +353,8 @@ class _$GameStateImpl extends _GameState {
     comboCount,
     lastFoundCityName,
     lastCorrectGuessTime,
+    gameMode,
+    remainingTime,
   );
 
   /// Create a copy of GameState
@@ -337,6 +377,8 @@ abstract class _GameState extends GameState {
     final int comboCount,
     final String lastFoundCityName,
     final DateTime? lastCorrectGuessTime,
+    final GameMode gameMode,
+    final int remainingTime,
   }) = _$GameStateImpl;
   const _GameState._() : super._();
 
@@ -358,6 +400,10 @@ abstract class _GameState extends GameState {
   String get lastFoundCityName;
   @override
   DateTime? get lastCorrectGuessTime;
+  @override
+  GameMode get gameMode;
+  @override
+  int get remainingTime;
 
   /// Create a copy of GameState
   /// with the given fields replaced by the non-null parameter values.

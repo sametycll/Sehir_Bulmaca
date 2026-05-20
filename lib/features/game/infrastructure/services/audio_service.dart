@@ -1,14 +1,32 @@
 import 'dart:developer' as developer;
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 class AudioService {
   static bool _muted = false;
 
-  // Çöp toplayıcıdan (GC) etkilenmeyen kalıcı oynatıcı kanalları
-  static final AudioPlayer _correctPlayer = AudioPlayer();
-  static final AudioPlayer _wrongPlayer = AudioPlayer();
-  static final AudioPlayer _comboPlayer = AudioPlayer();
-  static final AudioPlayer _successPlayer = AudioPlayer();
+  // Windows'ta AudioPlayer nesnelerini hiç oluşturmuyoruz —
+  // oluşturulmaları bile geçersiz file:/// URI üretiyor.
+  static bool get _isSupported {
+    if (kIsWeb) return true;
+    try {
+      return !Platform.isWindows;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  // Lazy-initialized oynatıcılar — sadece desteklenen platformlarda oluşturulur
+  static AudioPlayer? _correctPlayer;
+  static AudioPlayer? _wrongPlayer;
+  static AudioPlayer? _comboPlayer;
+  static AudioPlayer? _successPlayer;
+  static AudioPlayer? _heartbeatPlayer;
+
+  static final Set<String> _verifiedAssets = {};
+  static bool _assetsVerified = false;
 
   static void toggleMute() {
     _muted = !_muted;
@@ -17,57 +35,76 @@ class AudioService {
 
   static bool get isMuted => _muted;
 
-  /// Doğru tahmin sesi (Her şehir bulunduğunda stop-play ile anında sıfırlanıp tekrar çalar!)
+  static Future<void> verifyAssets() async {
+    if (_assetsVerified) return;
+    if (!_isSupported) {
+      developer.log('🔇 [AudioService] Windows — ses devre dışı.');
+      _assetsVerified = true;
+      return;
+    }
+
+    // Oynatıcıları sadece şimdi ve sadece desteklenen platformda oluştur
+    _correctPlayer ??= AudioPlayer();
+    _wrongPlayer ??= AudioPlayer();
+    _comboPlayer ??= AudioPlayer();
+    _successPlayer ??= AudioPlayer();
+    _heartbeatPlayer ??= AudioPlayer();
+
+    final candidates = [
+      'sounds/doğru_cevap.mp3',
+      'sounds/yanlis_cevap.mp3',
+      'sounds/combo_1.mp3',
+      'sounds/oyun_basarili.mp3',
+      'sounds/heartbeat.mp3',
+    ];
+    for (final path in candidates) {
+      try {
+        await rootBundle.load('assets/$path');
+        _verifiedAssets.add(path);
+      } catch (_) {
+        developer.log('🔊 [AudioService] ⚠️ Asset eksik: $path');
+      }
+    }
+    _assetsVerified = true;
+  }
+
+  static Future<void> _safePlay(AudioPlayer? player, String assetPath) async {
+    if (_muted || !_isSupported || player == null) return;
+    if (!_assetsVerified) await verifyAssets();
+    if (!_verifiedAssets.contains(assetPath)) return;
+    try {
+      await player.stop();
+      await player.play(AssetSource(assetPath));
+    } catch (e) {
+      developer.log('🔊 [AudioService] Ses hatası ($assetPath): $e');
+    }
+  }
+
   static Future<void> playCorrect() async {
-    if (_muted) return;
-    try {
-      await _correctPlayer.stop();
-      await _correctPlayer.play(AssetSource('sounds/doğru_cevap.mp3'));
-    } catch (e) {
-      developer.log('🔊 [AudioService] Doğru ses çalma hatası: $e');
-    }
+    await _safePlay(_correctPlayer, 'sounds/doğru_cevap.mp3');
   }
 
-  /// Yanlış tahmin sesi (Dosya yoksa hata vermez, sessizce es geçer)
   static Future<void> playWrong() async {
-    if (_muted) return;
-    try {
-      await _wrongPlayer.stop();
-      await _wrongPlayer.play(AssetSource('sounds/yanlis_cevap.mp3')).catchError((error) {
-        developer.log('🔊 [AudioService] Yanlış cevap ses dosyası yok, sessizce es geçiliyor.');
-      });
-    } catch (e) {
-      developer.log('🔊 [AudioService] Yanlış ses çalma hatası: $e');
-    }
+    await _safePlay(_wrongPlayer, 'sounds/yanlis_cevap.mp3');
   }
 
-  /// Kombo serisi sesi (Eğer kombo sesi telefonda yoksa, otomatik olarak varsayılan doğru tahmin sesini çalar!)
   static Future<void> playCombo(int comboCount) async {
-    if (_muted) return;
-    try {
-      await _comboPlayer.stop();
-      await _comboPlayer.play(AssetSource('sounds/combo_1.mp3')).catchError((error) {
-        developer.log('🔊 [AudioService] combo_$comboCount.mp3 bulunamadı. Doğru tahmin sesine dönülüyor...');
-        playCorrect();
-      });
-    } catch (e) {
-      developer.log('🔊 [AudioService] Kombo ses çalma hatası: $e');
-      playCorrect();
+    if (_verifiedAssets.contains('sounds/combo_1.mp3')) {
+      await _safePlay(_comboPlayer, 'sounds/combo_1.mp3');
+    } else {
+      await playCorrect();
     }
   }
 
-  /// Oyun başarıyla bitirildiğinde zafer sesi (Dosya yoksa varsayılan doğru tahmin sesine döner)
   static Future<void> playSuccess() async {
-    if (_muted) return;
-    try {
-      await _successPlayer.stop();
-      await _successPlayer.play(AssetSource('sounds/oyun_basarili.mp3')).catchError((error) {
-        developer.log('🔊 [AudioService] Zafer ses dosyası yok. Doğru tahmin sesine dönülüyor...');
-        playCorrect();
-      });
-    } catch (e) {
-      developer.log('🔊 [AudioService] Zafer ses çalma hatası: $e');
-      playCorrect();
+    if (_verifiedAssets.contains('sounds/oyun_basarili.mp3')) {
+      await _safePlay(_successPlayer, 'sounds/oyun_basarili.mp3');
+    } else {
+      await playCorrect();
     }
+  }
+
+  static Future<void> playHeartbeat() async {
+    await _safePlay(_heartbeatPlayer, 'sounds/heartbeat.mp3');
   }
 }

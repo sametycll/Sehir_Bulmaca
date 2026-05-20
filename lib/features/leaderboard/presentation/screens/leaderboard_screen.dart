@@ -236,17 +236,41 @@ class LeaderboardScreen extends ConsumerWidget {
               iconData = Icons.explore_rounded;
               activeGlowColor = AppColors.primary;
               break;
-            case GameMode.marmara:
-              iconData = Icons.waves_rounded;
-              activeGlowColor = Colors.blueAccent;
-              break;
-            case GameMode.ege:
-              iconData = Icons.wb_sunny_rounded;
-              activeGlowColor = Colors.orangeAccent;
-              break;
             case GameMode.timeAttack:
               iconData = Icons.bolt_rounded;
+              activeGlowColor = Colors.amber;
+              break;
+            case GameMode.blitzChallenge:
+              iconData = Icons.timer_outlined;
               activeGlowColor = Colors.redAccent;
+              break;
+            case GameMode.marmara:
+              iconData = Icons.water_rounded;
+              activeGlowColor = const Color(0xFF4FC3F7);
+              break;
+            case GameMode.ege:
+              iconData = Icons.beach_access_rounded;
+              activeGlowColor = const Color(0xFF26C6DA);
+              break;
+            case GameMode.akdeniz:
+              iconData = Icons.wb_sunny_rounded;
+              activeGlowColor = const Color(0xFFFF8A65);
+              break;
+            case GameMode.icAnadolu:
+              iconData = Icons.landscape_rounded;
+              activeGlowColor = const Color(0xFFA5D6A7);
+              break;
+            case GameMode.karadeniz:
+              iconData = Icons.forest_rounded;
+              activeGlowColor = const Color(0xFF80CBC4);
+              break;
+            case GameMode.doguAnadolu:
+              iconData = Icons.terrain_rounded;
+              activeGlowColor = const Color(0xFFCE93D8);
+              break;
+            case GameMode.guneydoguAnadolu:
+              iconData = Icons.filter_drama_rounded;
+              activeGlowColor = const Color(0xFFFFCC02);
               break;
           }
 

@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../domain/entities/city_entity.dart';
+import '../../../leaderboard/domain/entities/game_mode.dart';
 
 part 'game_state.freezed.dart';
 
@@ -15,6 +16,8 @@ class GameState with _$GameState {
     @Default(0) int comboCount,
     @Default('') String lastFoundCityName,
     DateTime? lastCorrectGuessTime,
+    @Default(GameMode.allTurkey) GameMode gameMode,
+    @Default(0) int remainingTime,
   }) = _GameState;
 
   const GameState._();

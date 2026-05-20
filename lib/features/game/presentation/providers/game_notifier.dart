@@ -2,8 +2,11 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/extensions/string_extensions.dart';
 import '../../domain/entities/city_entity.dart';
+import '../../../leaderboard/domain/entities/game_mode.dart';
 import '../../infrastructure/services/audio_service.dart';
 import 'game_state.dart';
+
+final playGameModeProvider = StateProvider<GameMode>((ref) => GameMode.allTurkey);
 
 final gameProvider = NotifierProvider.autoDispose<GameNotifier, GameState>(() {
   return GameNotifier();
@@ -21,8 +24,14 @@ class GameNotifier extends AutoDisposeNotifier<GameState> {
     return const GameState();
   }
 
-  void initGame(List<CityEntity> cities) {
+  void initGame(List<CityEntity> cities, GameMode mode) {
     final cityMap = {for (var city in cities) city.normalizedName: city};
+    
+    int initialRemainingTime = 0;
+    if (mode.isTimedMode) {
+      initialRemainingTime = 60;
+    }
+
     state = state.copyWith(
       allCities: cityMap,
       foundCities: [],
@@ -32,6 +41,8 @@ class GameNotifier extends AutoDisposeNotifier<GameState> {
       comboCount: 0,
       lastFoundCityName: '',
       lastCorrectGuessTime: null,
+      gameMode: mode,
+      remainingTime: initialRemainingTime,
     );
     _startTimer();
   }
@@ -40,7 +51,29 @@ class GameNotifier extends AutoDisposeNotifier<GameState> {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (state.isRunning && !state.isFinished) {
-        state = state.copyWith(elapsedTime: state.elapsedTime + 1);
+        if (state.gameMode.isTimedMode) {
+          final newRemainingTime = state.remainingTime - 1;
+          
+          if (newRemainingTime <= 0) {
+            state = state.copyWith(
+              remainingTime: 0,
+              elapsedTime: state.elapsedTime + 1,
+            );
+            _finishGame();
+          } else {
+            state = state.copyWith(
+              remainingTime: newRemainingTime,
+              elapsedTime: state.elapsedTime + 1,
+            );
+            
+            // Son 10 saniyede kalp atışı sesi
+            if (newRemainingTime <= 10) {
+              AudioService.playHeartbeat();
+            }
+          }
+        } else {
+          state = state.copyWith(elapsedTime: state.elapsedTime + 1);
+        }
       }
     });
   }
@@ -80,11 +113,19 @@ class GameNotifier extends AutoDisposeNotifier<GameState> {
       AudioService.playCorrect();
     }
     
+    // Zamana Karşı modunda kalan süreye ek saniye eklenir (Blitz modunda eklenmez)
+    int newRemainingTime = state.remainingTime;
+    if (state.gameMode == GameMode.timeAttack) {
+      final addedSeconds = newCombo * 3;
+      newRemainingTime = (state.remainingTime + addedSeconds).clamp(0, 99);
+    }
+
     state = state.copyWith(
       foundCities: newFoundCities,
       comboCount: newCombo,
       lastFoundCityName: city.name,
       lastCorrectGuessTime: now,
+      remainingTime: newRemainingTime,
     );
 
     if (newFoundCities.length == state.allCities.length) {

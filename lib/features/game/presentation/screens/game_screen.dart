@@ -5,10 +5,12 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/extensions/string_extensions.dart';
 import '../../data/sources/city_data.dart';
 import '../../domain/entities/city_entity.dart';
+import '../../infrastructure/data_sources/region_data.dart';
 import '../providers/game_notifier.dart';
 import '../providers/game_state.dart';
 import 'package:sehir_bulmaca/features/leaderboard/presentation/providers/leaderboard_provider.dart';
 import 'package:sehir_bulmaca/features/leaderboard/domain/entities/game_mode.dart';
+import 'package:sehir_bulmaca/features/auth/presentation/auth_notifier.dart';
 import '../widgets/game_input_field.dart';
 import '../widgets/turkiye_map_widget.dart';
 
@@ -35,14 +37,27 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   void _startNewGame() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final normalizedCities = CityRawData.cities.map((c) => CityEntity(
+      final mode = ref.read(playGameModeProvider);
+
+      // Bölgesel mod ise sadece o bölgenin il plaka kodlarını kullan
+      List<Map<String, dynamic>> rawList = CityRawData.cities;
+      if (mode.isRegional) {
+        final regionPlates = RegionData.platesForMode(mode.id);
+        if (regionPlates != null && regionPlates.isNotEmpty) {
+          rawList = CityRawData.cities
+              .where((c) => regionPlates.contains(c['plateCode'] as int))
+              .toList();
+        }
+      }
+
+      final normalizedCities = rawList.map((c) => CityEntity(
         id: c['id'] as String,
         name: c['name'] as String,
         normalizedName: (c['name'] as String).normalizeCityName,
         plateCode: c['plateCode'] as int,
       )).toList();
 
-      ref.read(gameProvider.notifier).initGame(normalizedCities);
+      ref.read(gameProvider.notifier).initGame(normalizedCities, mode);
     });
   }
 
@@ -101,8 +116,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color(0xFF0F172A), // Modern Slate Koyu Tema
-                Color(0xFF020617), // Derin uzay siyahı
+                Color(0xFF0F172A),
+                Color(0xFF020617),
               ],
             ),
           ),
@@ -110,10 +125,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             children: [
               Column(
                 children: [
-                  // Güçlendirilmiş İstatistik Paneli (Klavye açıkken son derece minimal olur)
                   _buildStatPanel(context, gameState, isKeyboardOpen),
                   
-                  // Harita Alanı (Klavye açıkken dikey dolguyu azaltıp haritaya maksimum alan kazandırırız!)
                   Expanded(
                     child: Padding(
                       padding: EdgeInsets.symmetric(
@@ -124,10 +137,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     ),
                   ),
                   
-                  // Input Alanı
                   const GameInputField(),
                 ],
               ),
+              if (gameState.gameMode == GameMode.timeAttack || gameState.gameMode == GameMode.blitzChallenge)
+                if (gameState.remainingTime <= 10 && gameState.isRunning && !gameState.isFinished)
+                  const Positioned.fill(
+                    child: PulsingNeonBorder(),
+                  ),
             ],
           ),
         ),
@@ -136,10 +153,19 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   Widget _buildStatPanel(BuildContext context, GameState gameState, bool isKeyboardOpen) {
-    final minutes = (gameState.elapsedTime / 60).floor();
-    final remainingSeconds = gameState.elapsedTime % 60;
-    final formattedTime = 
-        '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+    final String formattedTime;
+    final bool isTimed = gameState.gameMode == GameMode.timeAttack || gameState.gameMode == GameMode.blitzChallenge;
+    
+    if (isTimed) {
+      formattedTime = '${gameState.remainingTime} sn';
+    } else {
+      final minutes = (gameState.elapsedTime / 60).floor();
+      final remainingSeconds = gameState.elapsedTime % 60;
+      formattedTime = '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+    }
+
+    // Süreli modlarda kalan 10 saniyede zaman göstergesini kırmızı renkte göster
+    final timeColor = (isTimed && gameState.remainingTime <= 10) ? AppColors.error : AppColors.secondary;
 
     if (isKeyboardOpen) {
       // Klavye açıkken dikey yer kazanmak için tek satırlık aşırı minimal tasarım
@@ -155,8 +181,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _buildCompactStat('BULUNAN', '${gameState.foundCities.length}', const Color(0xFF10B981)),
-            _buildCompactStat('SÜRE', formattedTime, AppColors.secondary, isMonospace: true),
-            _buildCompactStat('KALAN', '${gameState.remainingCount}', AppColors.textSecondaryDark),
+            _buildCompactStat(isTimed ? 'KALAN SÜRE' : 'SÜRE', formattedTime, timeColor, isMonospace: true),
+            _buildCompactStat('KALAN İL', '${gameState.remainingCount}', AppColors.textSecondaryDark),
           ],
         ),
       );
@@ -184,8 +210,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildStatItem('BULUNAN', '${gameState.foundCities.length}', const Color(0xFF10B981)),
-              _buildStatItem('SÜRE', formattedTime, AppColors.secondary, isMonospace: true),
-              _buildStatItem('KALAN', '${gameState.remainingCount}', AppColors.textSecondaryDark),
+              _buildStatItem(isTimed ? 'KALAN SÜRE' : 'SÜRE', formattedTime, timeColor, isMonospace: true),
+              _buildStatItem('KALAN İL', '${gameState.remainingCount}', AppColors.textSecondaryDark),
             ],
           ),
           const SizedBox(height: 16),
@@ -362,16 +388,25 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   void _showGameOverDialog(BuildContext context, GameState finalState) {
-    final nameController = TextEditingController();
+    final authState = ref.read(authProvider);
+    final initialName = authState.user?.displayName ?? '';
+    final nameController = TextEditingController(text: initialName);
+    
     final int score = finalState.foundCities.length;
     final int elapsedTime = finalState.elapsedTime;
-    final bool allFound = score == 81;
+    final int maxScore = finalState.gameMode.maxScore;
+    final bool allFound = score == maxScore;
     bool isSaving = false;
 
-    final minutes = (elapsedTime / 60).floor();
-    final remainingSeconds = elapsedTime % 60;
-    final formattedTime = 
-        '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+    // Süre biçimlendirme
+    final String formattedTime;
+    if (finalState.gameMode == GameMode.timeAttack || finalState.gameMode == GameMode.blitzChallenge) {
+      formattedTime = '$elapsedTime sn';
+    } else {
+      final minutes = (elapsedTime / 60).floor();
+      final remainingSeconds = elapsedTime % 60;
+      formattedTime = '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+    }
 
     showDialog(
       context: context,
@@ -426,7 +461,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   children: [
                     Text(
                       allFound 
-                          ? 'Mükemmel! Türkiye\'deki tüm şehirleri başarıyla buldunuz!'
+                          ? 'Mükemmel! ${finalState.gameMode.title} kapsamındaki tüm şehirleri başarıyla buldunuz!'
                           : 'Oyunu tamamladınız! Performansınız oldukça başarılı.',
                       textAlign: TextAlign.center,
                       style: const TextStyle(color: AppColors.textSecondaryDark, fontSize: 14),
@@ -439,14 +474,16 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                         Expanded(
                           child: _buildResultCard(
                             'DOĞRU ŞEHİR',
-                            '$score / 81',
+                            '$score / $maxScore',
                             const Color(0xFF10B981),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: _buildResultCard(
-                            'GEÇEN SÜRE',
+                            finalState.gameMode == GameMode.timeAttack || finalState.gameMode == GameMode.blitzChallenge
+                                ? 'TOPLAM SÜRE'
+                                : 'GEÇEN SÜRE',
                             formattedTime,
                             AppColors.secondary,
                           ),
@@ -504,10 +541,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                           });
                           
                           try {
-                            // Direct submission with standard Riverpod notifier
+                            // Misafir ismi güncelleniyor
+                            if (authState.isGuest) {
+                              await ref.read(authProvider.notifier).updateGuestNickname(name);
+                            }
+
+                            // Doğru mod ile skoru kaydet
                             await ref.read(leaderboardNotifierProvider.notifier).submitScore(
                               name: name,
-                              mode: GameMode.allTurkey,
+                              mode: finalState.gameMode,
                               score: score,
                               elapsedTime: elapsedTime,
                             );
@@ -627,6 +669,66 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Son 10 Saniyede Ekran Çerçevesinde Pulsing Neon Kırmızı Çizgi Çizen Animasyonlu Widget
+class PulsingNeonBorder extends StatefulWidget {
+  const PulsingNeonBorder({super.key});
+
+  @override
+  State<PulsingNeonBorder> createState() => _PulsingNeonBorderState();
+}
+
+class _PulsingNeonBorderState extends State<PulsingNeonBorder>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _glowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..repeat(reverse: true);
+
+    _glowAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _glowAnimation,
+      builder: (context, child) {
+        return IgnorePointer(
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: Colors.red.withValues(alpha: 0.35 + (_glowAnimation.value * 0.65)),
+                width: 3.0 + (_glowAnimation.value * 3.0),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.red.withValues(alpha: 0.25 + (_glowAnimation.value * 0.5)),
+                  blurRadius: 15.0 + (_glowAnimation.value * 15.0),
+                  spreadRadius: 1.0,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -39,7 +39,8 @@ service cloud.firestore {
           (request.resource.data.modeId == 'all_turkey' && request.resource.data.score <= 81) ||
           (request.resource.data.modeId == 'marmara' && request.resource.data.score <= 11) ||
           (request.resource.data.modeId == 'ege' && request.resource.data.score <= 8) ||
-          (request.resource.data.modeId == 'time_attack' && request.resource.data.score <= 81)
+          (request.resource.data.modeId == 'time_attack' && request.resource.data.score <= 81) ||
+          (request.resource.data.modeId == 'blitz_challenge' && request.resource.data.score <= 81)
         );
     }
   }
