@@ -60,8 +60,8 @@ class LocalLeaderboardService {
       return b.date.compareTo(a.date);
     });
 
-    // Listeyi kaydet
-    final String jsonString = json.encode(entries.map((e) => e.toMap()).toList());
+    // Listeyi kaydet (Timestamp yerine yerel hafızaya uygun olan toMapJsonFallback metodunu kullanıyoruz)
+    final String jsonString = json.encode(entries.map((e) => e.toMapJsonFallback()).toList());
     await prefs.setString(_key, jsonString);
   }
 

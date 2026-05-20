@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Türkiye Şehir Bulmaca - Production-Grade Leaderboard Security Rules
+    match /leaderboards/{documentId} {
+      
+      // 1. READ ACCESS: Anyone can view the high-score list (both in-game and global dashboards)
+      allow read: if true;
+      
+      // 2. WRITE ACCESS: Strict validations to block client-side score manipulation
+      allow write: if request.auth != null // User must be authenticated (anonymous login counts)
+        
+        // Anti-Impersonation: Document ID must exactly match the naming convention '{modeId}__{userId}'
+        && documentId == request.resource.data.modeId + '__' + request.auth.uid
+        
+        // Ownership Validation: Field 'userId' must equal the user's authentic Firebase UID
+        && request.resource.data.userId == request.auth.uid
+        
+        // Name Constraints: Name must be a non-empty string, maximum 20 characters
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 20
+        
+        // Type Safety: Score and elapsedTime must be valid integers
+        && request.resource.data.score is int
+        && request.resource.data.elapsedTime is int
+        && request.resource.data.elapsedTime >= 1 // Time cannot be zero or negative
+        
+        // Formula Enforcement: Enforce matching math for the compositeScore to block cheaters
+        && request.resource.data.compositeScore is int
+        && request.resource.data.compositeScore == (request.resource.data.score * 100000) + (100000 - (request.resource.data.elapsedTime > 100000 ? 100000 : request.resource.data.elapsedTime))
+        
+        // Time Integrity: The submission timestamp must match the exact server-received time (request.time)
+        && request.resource.data.date == request.time
+        
+        // Mode-Based Score Limits: Validate that the score does not exceed the maximum cities for the specific game mode
+        && (
+          (request.resource.data.modeId == 'all_turkey' && request.resource.data.score <= 81) ||
+          (request.resource.data.modeId == 'marmara' && request.resource.data.score <= 11) ||
+          (request.resource.data.modeId == 'ege' && request.resource.data.score <= 8) ||
+          (request.resource.data.modeId == 'time_attack' && request.resource.data.score <= 81)
+        );
+    }
+  }
+}

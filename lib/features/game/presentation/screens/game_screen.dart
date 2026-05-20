@@ -8,6 +8,7 @@ import '../../domain/entities/city_entity.dart';
 import '../providers/game_notifier.dart';
 import '../providers/game_state.dart';
 import 'package:sehir_bulmaca/features/leaderboard/presentation/providers/leaderboard_provider.dart';
+import 'package:sehir_bulmaca/features/leaderboard/domain/entities/game_mode.dart';
 import '../widgets/game_input_field.dart';
 import '../widgets/turkiye_map_widget.dart';
 
@@ -365,6 +366,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final int score = finalState.foundCities.length;
     final int elapsedTime = finalState.elapsedTime;
     final bool allFound = score == 81;
+    bool isSaving = false;
 
     final minutes = (elapsedTime / 60).floor();
     final remainingSeconds = elapsedTime % 60;
@@ -495,13 +497,44 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               actionsOverflowButtonSpacing: 8,
               actions: [
                 ElevatedButton(
-                  onPressed: isButtonEnabled
+                  onPressed: (isButtonEnabled && !isSaving)
                       ? () async {
-                          // Liderlik tablosuna kaydet
-                          await ref.read(leaderboardProvider.notifier).addEntry(name, score, elapsedTime);
-                          if (context.mounted) {
-                            Navigator.of(context).pop(); // Dialogu kapat
-                            context.go('/leaderboard'); // Liderlik tablosuna git
+                          setState(() {
+                            isSaving = true;
+                          });
+                          
+                          try {
+                            // Direct submission with standard Riverpod notifier
+                            await ref.read(leaderboardNotifierProvider.notifier).submitScore(
+                              name: name,
+                              mode: GameMode.allTurkey,
+                              score: score,
+                              elapsedTime: elapsedTime,
+                            );
+
+                            final submitState = ref.read(leaderboardNotifierProvider);
+                            if (submitState.hasError) {
+                              throw submitState.error ?? Exception('Bilinmeyen bir hata oluştu.');
+                            }
+
+                            if (context.mounted) {
+                              Navigator.of(context).pop(); // Close dialog
+                              context.go('/leaderboard'); // Go to leaderboard
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              setState(() {
+                                isSaving = false;
+                              });
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Hata: $e'),
+                                  backgroundColor: AppColors.error,
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(seconds: 8),
+                                ),
+                              );
+                            }
                           }
                         }
                       : null,
@@ -511,7 +544,16 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     minimumSize: const Size(double.infinity, 50),
                     disabledBackgroundColor: AppColors.surfaceDark.withValues(alpha: 0.5),
                   ),
-                  child: const Text('SKORU KAYDET VE SIRALAMAYI GÖR'),
+                  child: isSaving
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text('SKORU KAYDET VE SIRALAMAYI GÖR'),
                 ),
                 const SizedBox(height: 4),
                 Row(

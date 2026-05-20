@@ -1,6 +1,103 @@
 #include <flutter/dart_project.h>
 #include <flutter/flutter_view_controller.h>
 #include <windows.h>
+#include <algorithm>
+#include <cstdint>
+
+// Compatibility stubs for MSVC STL internal symbols to resolve Firebase linking issues
+extern "C" unsigned int _Avx2WmemEnabled = 0;
+
+extern "C" _Thrd_result __stdcall _Cnd_timedwait_for_unchecked(_Cnd_t cnd, _Mtx_t mtx, unsigned int ms) noexcept {
+    static _Thrd_result(__stdcall *func)(_Cnd_t, _Mtx_t, unsigned int) noexcept = nullptr;
+    if (!func) {
+        HMODULE hMod = GetModuleHandleA("msvcp140.dll");
+        if (!hMod) hMod = LoadLibraryA("msvcp140.dll");
+        if (hMod) {
+            func = reinterpret_cast<decltype(func)>(GetProcAddress(hMod, "_Cnd_timedwait_for_unchecked"));
+        }
+    }
+    if (func) {
+        return func(cnd, mtx, ms);
+    }
+    return static_cast<_Thrd_result>(0);
+}
+
+extern "C" const void* __stdcall __std_find_end_1(
+    const void* _First1, 
+    const void* _Last1, 
+    const void* _First2, 
+    size_t _Count2
+) noexcept {
+    const char* f1 = static_cast<const char*>(_First1);
+    const char* l1 = static_cast<const char*>(_Last1);
+    const char* f2 = static_cast<const char*>(_First2);
+    const char* l2 = f2 + _Count2;
+    if (_Count2 == 0) return _Last1;
+    const char* result = nullptr;
+    while (true) {
+        const char* current = std::search(f1, l1, f2, l2);
+        if (current == l1) break;
+        result = current;
+        f1 = current + 1;
+    }
+    return result ? result : l1;
+}
+
+extern "C" const void* __stdcall __std_search_1(
+    const void* _First1, 
+    const void* _Last1, 
+    const void* _First2, 
+    size_t _Count2
+) noexcept {
+    const char* f1 = static_cast<const char*>(_First1);
+    const char* l1 = static_cast<const char*>(_Last1);
+    const char* f2 = static_cast<const char*>(_First2);
+    const char* l2 = f2 + _Count2;
+    return std::search(f1, l1, f2, l2);
+}
+
+extern "C" void* __stdcall __std_remove_8(void* _First, void* _Last, uint64_t _Val) noexcept {
+    uint64_t* f = static_cast<uint64_t*>(_First);
+    uint64_t* l = static_cast<uint64_t*>(_Last);
+    return std::remove(f, l, _Val);
+}
+
+extern "C" size_t __stdcall __std_find_first_of_trivial_pos_1(
+    const void* _First1, 
+    size_t _Size1, 
+    const void* _First2, 
+    size_t _Size2
+) noexcept {
+    const char* f1 = static_cast<const char*>(_First1);
+    const char* f2 = static_cast<const char*>(_First2);
+    for (size_t i = 0; i < _Size1; ++i) {
+        for (size_t j = 0; j < _Size2; ++j) {
+            if (f1[i] == f2[j]) {
+                return i;
+            }
+        }
+    }
+    return static_cast<size_t>(-1);
+}
+
+extern "C" size_t __stdcall __std_find_last_of_trivial_pos_1(
+    const void* _First1, 
+    size_t _Size1, 
+    const void* _First2, 
+    size_t _Size2
+) noexcept {
+    const char* f1 = static_cast<const char*>(_First1);
+    const char* f2 = static_cast<const char*>(_First2);
+    for (size_t i = _Size1; i > 0; --i) {
+        size_t idx = i - 1;
+        for (size_t j = 0; j < _Size2; ++j) {
+            if (f1[idx] == f2[j]) {
+                return idx;
+            }
+        }
+    }
+    return static_cast<size_t>(-1);
+}
 
 #include "flutter_window.h"
 #include "utils.h"
