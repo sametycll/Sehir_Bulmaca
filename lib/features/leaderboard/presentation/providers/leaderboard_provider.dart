@@ -6,6 +6,8 @@ import '../../domain/entities/leaderboard_entry.dart';
 import '../../domain/repositories/leaderboard_repository.dart';
 import '../../data/repositories/firestore_leaderboard_repository.dart';
 import '../../data/local_leaderboard_service.dart';
+import '../../../achievements/domain/entities/achievement_event.dart';
+import '../../../achievements/presentation/providers/achievement_provider.dart';
 
 // Firebase core providers
 final firestoreProvider = Provider<FirebaseFirestore>((ref) => FirebaseFirestore.instance);
@@ -25,6 +27,23 @@ final leaderboardStreamProvider = StreamProvider.autoDispose<List<LeaderboardEnt
   final mode = ref.watch(activeGameModeProvider);
   final repository = ref.watch(leaderboardRepositoryProvider);
   return repository.getLeaderboardStream(mode.id, limit: 100);
+});
+
+// Provider for current user's personal stats across ALL game modes (fetched once)
+final myStatsProvider = FutureProvider.autoDispose<List<LeaderboardEntry>>((ref) async {
+  final auth = ref.watch(firebaseAuthProvider);
+  final firestore = ref.watch(firestoreProvider);
+  final userId = auth.currentUser?.uid;
+  if (userId == null) return [];
+
+  final snapshot = await firestore
+      .collection('leaderboards')
+      .where('userId', isEqualTo: userId)
+      .get();
+
+  return snapshot.docs
+      .map((doc) => LeaderboardEntry.fromMap(doc.data(), docId: doc.id))
+      .toList();
 });
 
 // Notifier provider for transactional operations (submitting, clearing)
@@ -76,6 +95,11 @@ class LeaderboardNotifier extends AsyncNotifier<void> {
 
       // 2. Also back up to SharedPreferences for local high-score records (Offline Fallback)
       await LocalLeaderboardService.saveEntry(entry);
+
+      // 3. Achievement event: leaderboard'a girildi
+      ref
+          .read(achievementProgressProvider.notifier)
+          .processEvent(const LeaderboardEnteredEvent());
     });
   }
 

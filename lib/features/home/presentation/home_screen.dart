@@ -7,6 +7,9 @@ import '../../../../core/theme/app_colors.dart';
 import '../../auth/presentation/auth_notifier.dart';
 import '../../leaderboard/domain/entities/game_mode.dart';
 import '../../game/presentation/providers/game_notifier.dart';
+import '../../progression/presentation/providers/progression_provider.dart';
+import '../../progression/domain/services/level_calculator.dart';
+import '../../progression/presentation/widgets/xp_bar_widget.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -268,6 +271,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           ),
                           const SizedBox(height: 16),
 
+                          PremiumMenuButton(
+                            onPressed: () => context.push('/achievements'),
+                            isPrimary: false,
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.military_tech_rounded,
+                                    color: AppColors.secondary, size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  'BAŞARIMLAR',
+                                  style: TextStyle(
+                                    color: AppColors.secondary,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
                           TextButton(
                             onPressed: () => _showHowToPlayDialog(context),
                             style: TextButton.styleFrom(
@@ -504,6 +530,129 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                 ),
                 const SizedBox(height: 20),
+
+                // Seviye ve XP İlerlemesi
+                Consumer(
+                  builder: (context, ref, child) {
+                    final progressAsync = ref.watch(progressionProvider);
+                    return progressAsync.when(
+                      data: (progress) {
+                        final title = LevelCalculator.getTitle(progress.level);
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.secondary.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: AppColors.secondary.withValues(alpha: 0.35),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.workspace_premium_rounded,
+                                        color: AppColors.secondary,
+                                        size: 14,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'SEVİYE ${progress.level}',
+                                        style: const TextStyle(
+                                          color: AppColors.secondary,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  title,
+                                  style: const TextStyle(
+                                    color: AppColors.textPrimaryDark,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            XpBarWidget(
+                              currentXp: progress.currentXp,
+                              xpToNextLevel: progress.xpToNextLevel,
+                              height: 8,
+                              showText: true,
+                            ),
+                            const SizedBox(height: 4),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Toplam: ${progress.totalXp} XP',
+                                style: TextStyle(
+                                  color: AppColors.textSecondaryDark.withValues(alpha: 0.5),
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            PremiumMenuButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                context.push('/progression');
+                              },
+                              isPrimary: false,
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.query_stats_rounded,
+                                    color: AppColors.primary,
+                                    size: 18,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'DETAYLI İLERLEME',
+                                    style: TextStyle(
+                                      color: AppColors.primary,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 1.1,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        );
+                      },
+                      loading: () => const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                            ),
+                          ),
+                        ),
+                      ),
+                      error: (err, stack) => const SizedBox.shrink(),
+                    );
+                  },
+                ),
 
                 // Kullanıcı ID Kartı
                 Container(

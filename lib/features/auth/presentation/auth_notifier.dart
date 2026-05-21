@@ -91,8 +91,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
           password: password,
         );
       } on FirebaseAuthException catch (e) {
-        if (e.code == 'user-not-found' || e.code == 'invalid-credential' || e.code == 'wrong-password') {
-          // Register the user since they don't exist yet
+        // Kullanıcı bulunamadıysa veya kimlik bilgisi geçersizse yeni kayıt oluştur.
+        // Firebase SDK sürümüne göre farklı hata kodları dönebilir.
+        const registrableErrors = {
+          'user-not-found',
+          'invalid-credential',
+          'wrong-password',
+          'INVALID_LOGIN_CREDENTIALS',
+          'user-disabled', // Silinmiş hesap → yeni oluştur
+        };
+        if (registrableErrors.contains(e.code)) {
+          // Kullanıcı yoksa kayıt oluştur
           userCredential = await _auth.createUserWithEmailAndPassword(
             email: email,
             password: password,
@@ -117,9 +126,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isGuest: true,
       );
     } catch (e) {
+      debugPrint('[AuthNotifier] signInAsGuest HATA: ${e.runtimeType} | $e');
+      String userMessage = 'Anonim giriş başarısız oldu.';
+      if (e is FirebaseAuthException) {
+        debugPrint('[AuthNotifier] Firebase kod: ${e.code}');
+        switch (e.code) {
+          case 'operation-not-allowed':
+            userMessage =
+                'E-posta/şifre girişi Firebase\'de etkinleştirilmemiş. Lütfen yöneticiyle iletişime geçin.';
+            break;
+          case 'too-many-requests':
+            userMessage = 'Çok fazla istek gönderildi. Lütfen bir süre bekleyin.';
+            break;
+          case 'network-request-failed':
+            userMessage = 'İnternet bağlantısı yok. Lütfen bağlantınızı kontrol edin.';
+            break;
+          default:
+            userMessage = 'Misafir girişi başarısız: ${e.code}';
+        }
+      }
       state = state.copyWith(
         status: AuthStatus.error,
-        errorMessage: 'Misafir girişi başarısız: $e',
+        errorMessage: userMessage,
       );
     }
   }

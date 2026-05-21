@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
+import '../../../achievements/domain/entities/enums.dart';
 
 class AudioService {
   static bool _muted = false;
@@ -106,5 +107,22 @@ class AudioService {
 
   static Future<void> playHeartbeat() async {
     await _safePlay(_heartbeatPlayer, 'sounds/heartbeat.mp3');
+  }
+
+  /// Achievement unlock sesi — rarity'ye göre farklı ses.
+  /// common: kısa doğru cevap sesi
+  /// rare/epic: kombo sesi
+  /// legendary: başarı müzikleri
+  static Future<void> playAchievementUnlocked(AchievementRarity rarity) async {
+    switch (rarity) {
+      case AchievementRarity.common:
+        await playCorrect();
+      case AchievementRarity.rare:
+        await playCombo(2);
+      case AchievementRarity.epic:
+        await playCombo(3);
+      case AchievementRarity.legendary:
+        await playSuccess();
+    }
   }
 }

@@ -4,6 +4,10 @@ import '../../../../core/extensions/string_extensions.dart';
 import '../../domain/entities/city_entity.dart';
 import '../../../leaderboard/domain/entities/game_mode.dart';
 import '../../infrastructure/services/audio_service.dart';
+import '../../../achievements/domain/entities/achievement_event.dart';
+import '../../../achievements/presentation/providers/achievement_provider.dart';
+import '../../../progression/domain/entities/xp_event.dart';
+import '../../../progression/presentation/providers/progression_provider.dart';
 import 'game_state.dart';
 
 final playGameModeProvider = StateProvider<GameMode>((ref) => GameMode.allTurkey);
@@ -128,9 +132,31 @@ class GameNotifier extends AutoDisposeNotifier<GameState> {
       remainingTime: newRemainingTime,
     );
 
+    // Achievement tracking — fire-and-forget, oyun akışını bloklamaz
+    _trackCityFoundEvent(newFoundCities.length, newCombo);
+    _trackCityFoundXpEvent(city.name, newCombo);
+
     if (newFoundCities.length == state.allCities.length) {
       AudioService.playSuccess();
       _finishGame();
+    }
+  }
+
+  /// Achievement event'i async olarak gönderir.
+  /// unawaited — game notifier bunu beklemeden devam eder.
+  void _trackCityFoundEvent(int totalFound, int comboCount) {
+    try {
+      final notifier = ref.read(achievementProgressProvider.notifier);
+      notifier.processEvent(CityFoundEvent(
+        totalFoundInSession: totalFound,
+        comboCount: comboCount,
+        modeId: state.gameMode.id,
+      ));
+      if (comboCount >= 2) {
+        notifier.processEvent(ComboReachedEvent(comboCount: comboCount));
+      }
+    } catch (_) {
+      // Achievement sistemi oyunun çökmesine neden olmamalı
     }
   }
 
@@ -141,5 +167,27 @@ class GameNotifier extends AutoDisposeNotifier<GameState> {
   void _finishGame() {
     _timer?.cancel();
     state = state.copyWith(isRunning: false, isFinished: true);
+
+    // Achievement: oyun tamamlandı
+    try {
+      ref.read(achievementProgressProvider.notifier).processEvent(
+        GameCompletedEvent(
+          modeId: state.gameMode.id,
+          citiesFound: state.foundCities.length,
+          elapsedTime: state.elapsedTime,
+          isAllFound: state.foundCities.length == state.allCities.length,
+        ),
+      );
+    } catch (_) {}
+  }
+
+  void _trackCityFoundXpEvent(String cityName, int comboCount) {
+    try {
+      final progressionNotifier = ref.read(progressionProvider.notifier);
+      progressionNotifier.trackEvent(CityFoundXpEvent(cityName: cityName));
+      if (comboCount >= 2) {
+        progressionNotifier.trackEvent(ComboXpEvent(comboCount: comboCount));
+      }
+    } catch (_) {}
   }
 }

@@ -13,6 +13,11 @@ import 'package:sehir_bulmaca/features/leaderboard/domain/entities/game_mode.dar
 import 'package:sehir_bulmaca/features/auth/presentation/auth_notifier.dart';
 import '../widgets/game_input_field.dart';
 import '../widgets/turkiye_map_widget.dart';
+import 'package:sehir_bulmaca/features/achievements/presentation/controllers/achievement_overlay_controller.dart';
+import 'package:sehir_bulmaca/features/achievements/presentation/widgets/achievement_unlock_overlay.dart';
+import 'package:sehir_bulmaca/features/progression/presentation/providers/progression_provider.dart';
+import 'package:sehir_bulmaca/features/progression/domain/entities/xp_event.dart';
+import 'package:sehir_bulmaca/features/progression/presentation/providers/level_up_queue_provider.dart';
 
 
 
@@ -81,6 +86,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         final combo = current.comboCount;
         if (cityName.isNotEmpty) {
           _showFloatingNotification(context, cityName, combo);
+        }
+      }
+    });
+
+    // Achievement popup listener — FIFO queue'dan sırayla göster
+    ref.listen<List>(achievementQueueProvider, (previous, next) {
+      if (next.isNotEmpty) {
+        final queueNotifier = ref.read(achievementQueueProvider.notifier);
+        if (!queueNotifier.isShowing) {
+          queueNotifier.markAsShowing();
+          _showAchievementOverlay(context, next.first);
         }
       }
     });
@@ -281,7 +297,31 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     );
   }
 
+  void _showAchievementOverlay(BuildContext context, dynamic achievement) {
+    final overlayState = Overlay.of(context);
+    final entry = createAchievementOverlayEntry(
+      achievement: achievement,
+      onFinished: () {
+        ref.read(achievementQueueProvider.notifier).dequeue();
+        // Kuyrukta başka var mı?
+        final remaining = ref.read(achievementQueueProvider);
+        if (remaining.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) {
+              ref.read(achievementQueueProvider.notifier).markAsShowing();
+              _showAchievementOverlay(context, remaining.first);
+            }
+          });
+        }
+      },
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.mounted) overlayState.insert(entry);
+    });
+  }
+
   void _showFloatingNotification(BuildContext context, String cityName, int combo) {
+
     final overlayState = Overlay.of(context);
     final double cityOffsetX = combo >= 2 ? -65.0 : 0.0;
     
@@ -561,7 +601,28 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
                             if (context.mounted) {
                               Navigator.of(context).pop(); // Close dialog
-                              context.go('/leaderboard'); // Go to leaderboard
+                              
+                              // Oyun sonu XP'sini ver
+                              try {
+                                final isCompleted = finalState.foundCities.length == finalState.allCities.length || finalState.gameMode.isTimedMode;
+                                if (isCompleted) {
+                                  await ref.read(progressionProvider.notifier).trackEvent(
+                                    GameCompletedXpEvent(
+                                      modeId: finalState.gameMode.id,
+                                      isRegion: finalState.gameMode.isRegional,
+                                    ),
+                                  );
+                                }
+                              } catch (_) {}
+                              
+                              // Seviye popuplarını göster ve bittiğinde yönlendir
+                              ref.read(levelUpQueueProvider.notifier).startProcessing(
+                                onComplete: () {
+                                  if (context.mounted) {
+                                    context.go('/leaderboard'); // Go to leaderboard
+                                  }
+                                },
+                              );
                             }
                           } catch (e) {
                             if (context.mounted) {
@@ -602,9 +663,28 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           Navigator.of(context).pop();
-                          _startNewGame();
+                          
+                          // Oyun sonu XP'sini ver
+                          try {
+                            final isCompleted = finalState.foundCities.length == finalState.allCities.length || finalState.gameMode.isTimedMode;
+                            if (isCompleted) {
+                              await ref.read(progressionProvider.notifier).trackEvent(
+                                GameCompletedXpEvent(
+                                  modeId: finalState.gameMode.id,
+                                  isRegion: finalState.gameMode.isRegional,
+                                ),
+                              );
+                            }
+                          } catch (_) {}
+                          
+                          // Seviye popuplarını göster ve bittiğinde yeni oyun başlat
+                          ref.read(levelUpQueueProvider.notifier).startProcessing(
+                            onComplete: () {
+                              _startNewGame();
+                            },
+                          );
                         },
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: AppColors.primary),
@@ -618,9 +698,30 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: TextButton(
-                        onPressed: () {
+                        onPressed: () async {
                           Navigator.of(context).pop();
-                          context.go('/');
+
+                          // Oyun sonu XP'sini ver
+                          try {
+                            final isCompleted = finalState.foundCities.length == finalState.allCities.length || finalState.gameMode.isTimedMode;
+                            if (isCompleted) {
+                              await ref.read(progressionProvider.notifier).trackEvent(
+                                GameCompletedXpEvent(
+                                  modeId: finalState.gameMode.id,
+                                  isRegion: finalState.gameMode.isRegional,
+                                ),
+                              );
+                            }
+                          } catch (_) {}
+
+                          // Seviye popuplarını göster ve bittiğinde ana sayfaya git
+                          ref.read(levelUpQueueProvider.notifier).startProcessing(
+                            onComplete: () {
+                              if (context.mounted) {
+                                context.go('/');
+                              }
+                            },
+                          );
                         },
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.textSecondaryDark,
