@@ -10,6 +10,7 @@ class LeaderboardEntry {
   final int elapsedTime; // seconds taken
   final int compositeScore; // combined score & speed ranking value
   final DateTime date; // timestamp of scoring
+  final String? photoUrl; // Profile photo URL
 
   LeaderboardEntry({
     this.id,
@@ -20,6 +21,7 @@ class LeaderboardEntry {
     required this.elapsedTime,
     required this.compositeScore,
     required this.date,
+    this.photoUrl,
   });
 
   /// Factory constructor to build an entry from a game output.
@@ -30,6 +32,7 @@ class LeaderboardEntry {
     required String modeId,
     required int score,
     required int elapsedTime,
+    String? photoUrl,
   }) {
     return LeaderboardEntry(
       userId: userId,
@@ -39,6 +42,7 @@ class LeaderboardEntry {
       elapsedTime: elapsedTime,
       compositeScore: calculateCompositeScore(score, elapsedTime),
       date: DateTime.now(),
+      photoUrl: photoUrl,
     );
   }
 
@@ -59,6 +63,7 @@ class LeaderboardEntry {
       'elapsedTime': elapsedTime,
       'compositeScore': compositeScore,
       'date': Timestamp.fromDate(date),
+      if (photoUrl != null) 'photoUrl': photoUrl,
     };
   }
 
@@ -90,6 +95,7 @@ class LeaderboardEntry {
       elapsedTime: elapsedTimeVal,
       compositeScore: compositeVal,
       date: parsedDate,
+      photoUrl: map['photoUrl'] as String?,
     );
   }
 
@@ -104,6 +110,7 @@ class LeaderboardEntry {
       'elapsedTime': elapsedTime,
       'compositeScore': compositeScore,
       'date': date.toIso8601String(),
+      if (photoUrl != null) 'photoUrl': photoUrl,
     };
   }
 

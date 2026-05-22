@@ -116,16 +116,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     }
                     final user = authState.user!;
                     final isGuest = authState.isGuest;
-                    final displayName = user.displayName ?? 'Oyuncu';
+                    final displayName = user.displayName;
                     final photoUrl = user.photoURL;
                     final uid = user.uid;
+                    final shortTag = user.shortTag;
 
                     return GestureDetector(
                       onTap: () => _showProfileDialog(
                           context, ref, displayName, user.email ?? '',
-                          photoUrl, isGuest, uid),
+                          photoUrl, isGuest, uid, shortTag),
                       child: _ProfileChip(
                         displayName: displayName,
+                        shortTag: shortTag,
                         photoUrl: photoUrl,
                         isGuest: isGuest,
                       ),
@@ -430,6 +432,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     String? photoUrl,
     bool isGuest,
     String uid,
+    String shortTag,
   ) {
     showDialog(
       context: context,
@@ -513,13 +516,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 const SizedBox(height: 16),
 
                 // İsim
-                Text(
-                  name,
-                  style: const TextStyle(
-                    color: AppColors.textPrimaryDark,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        name,
+                        style: const TextStyle(
+                          color: AppColors.textPrimaryDark,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (shortTag.isNotEmpty) ...[
+                      const SizedBox(width: 4),
+                      Text(
+                        '#$shortTag',
+                        style: TextStyle(
+                          color: AppColors.textSecondaryDark.withValues(alpha: 0.7),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -1031,11 +1055,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 // ─── Premium Profil Chip ───
 class _ProfileChip extends StatefulWidget {
   final String displayName;
+  final String? shortTag;
   final String? photoUrl;
   final bool isGuest;
 
   const _ProfileChip({
     required this.displayName,
+    this.shortTag,
     this.photoUrl,
     required this.isGuest,
   });
@@ -1142,13 +1168,33 @@ class _ProfileChipState extends State<_ProfileChip>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      widget.displayName,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            widget.displayName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (widget.shortTag != null && widget.shortTag!.isNotEmpty) ...[
+                          const SizedBox(width: 3),
+                          Text(
+                            '#${widget.shortTag}',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.5),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     Text(
                       widget.isGuest ? 'Misafir' : 'Google',

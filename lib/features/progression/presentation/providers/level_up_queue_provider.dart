@@ -32,11 +32,14 @@ class LevelUpQueueNotifier extends StateNotifier<List<LevelUpDetails>> {
 
   /// Yeni bir seviye atlama olayını kuyruğa ekler.
   void enqueue(LevelUpDetails details) {
+    debugPrint('📥 [QUEUE-DEBUG] enqueue called: ${details.fromLevel} -> ${details.toLevel}');
     state = [...state, details];
+    debugPrint('📥 [QUEUE-DEBUG] Queue size now: ${state.length}, isShowing=$_isShowing');
   }
 
   /// Mevcut popup kapatıldığında çağrılır, sıradakine geçiş sağlar.
   void dequeue() {
+    debugPrint('📤 [QUEUE-DEBUG] dequeue called. Queue size before: ${state.length}');
     if (state.isEmpty) {
       _isShowing = false;
       _triggerAllDismissed();
@@ -44,6 +47,7 @@ class LevelUpQueueNotifier extends StateNotifier<List<LevelUpDetails>> {
     }
     state = state.sublist(1);
     _isShowing = state.isNotEmpty;
+    debugPrint('📤 [QUEUE-DEBUG] Queue size after: ${state.length}, isShowing=$_isShowing');
     if (state.isEmpty) {
       _triggerAllDismissed();
     }
@@ -51,6 +55,7 @@ class LevelUpQueueNotifier extends StateNotifier<List<LevelUpDetails>> {
 
   /// Popup gösterilmeye başlandığında işaretlenir.
   void markAsShowing() {
+    debugPrint('👁️ [QUEUE-DEBUG] markAsShowing called');
     _isShowing = true;
   }
 
@@ -63,12 +68,15 @@ class LevelUpQueueNotifier extends StateNotifier<List<LevelUpDetails>> {
 
   /// Bekleyen elemanların yeniden işlenmesini sağlamak için dinleyicileri tetikler.
   void forceNotify() {
+    debugPrint('🔔 [QUEUE-DEBUG] forceNotify called. Queue size: ${state.length}');
     state = [...state];
   }
 
   /// Seviye atlama popuplarını başlatır. Eğer kuyruk boşsa doğrudan [onComplete] çalışır.
   void startProcessing({required VoidCallback onComplete}) {
+    debugPrint('🚀 [QUEUE-DEBUG] startProcessing called. Queue size: ${state.length}, isShowing=$_isShowing');
     if (state.isEmpty) {
+      debugPrint('🚀 [QUEUE-DEBUG] Queue is empty, calling onComplete immediately');
       onComplete();
     } else {
       _onAllDismissed = onComplete;
@@ -77,6 +85,7 @@ class LevelUpQueueNotifier extends StateNotifier<List<LevelUpDetails>> {
   }
 
   void _triggerAllDismissed() {
+    debugPrint('✅ [QUEUE-DEBUG] _triggerAllDismissed called. hasCallback=${_onAllDismissed != null}');
     if (_onAllDismissed != null) {
       final callback = _onAllDismissed!;
       _onAllDismissed = null;

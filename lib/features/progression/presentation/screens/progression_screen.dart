@@ -130,13 +130,34 @@ class ProgressionScreen extends ConsumerWidget {
                           const SizedBox(height: 16),
 
                           // Oyuncu Adı
-                          Text(
-                            displayName,
-                            style: const TextStyle(
-                              color: AppColors.textPrimaryDark,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  displayName,
+                                  style: const TextStyle(
+                                    color: AppColors.textPrimaryDark,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (user != null && user.shortTag.isNotEmpty) ...[
+                                const SizedBox(width: 4),
+                                Text(
+                                  '#${user.shortTag}',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondaryDark.withValues(alpha: 0.7),
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                           const SizedBox(height: 4),
 

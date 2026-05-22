@@ -17,10 +17,13 @@ service cloud.firestore {
         // Ownership Validation: Field 'userId' must equal the user's authentic Firebase UID
         && request.resource.data.userId == request.auth.uid
         
-        // Name Constraints: Name must be a non-empty string, maximum 20 characters
+        // Name Constraints: Name must be a non-empty string, maximum 35 characters to support displayName #shortTag
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
-        && request.resource.data.name.size() <= 20
+        && request.resource.data.name.size() <= 35
+        
+        // Photo URL: Optional field, must be string or null
+        && (!('photoUrl' in request.resource.data) || request.resource.data.photoUrl is string || request.resource.data.photoUrl == null)
         
         // Type Safety: Score and elapsedTime must be valid integers
         && request.resource.data.score is int
@@ -37,11 +40,22 @@ service cloud.firestore {
         // Mode-Based Score Limits: Validate that the score does not exceed the maximum cities for the specific game mode
         && (
           (request.resource.data.modeId == 'all_turkey' && request.resource.data.score <= 81) ||
+          (request.resource.data.modeId == 'time_attack' && request.resource.data.score <= 81) ||
+          (request.resource.data.modeId == 'blitz_challenge' && request.resource.data.score <= 81) ||
           (request.resource.data.modeId == 'marmara' && request.resource.data.score <= 11) ||
           (request.resource.data.modeId == 'ege' && request.resource.data.score <= 8) ||
-          (request.resource.data.modeId == 'time_attack' && request.resource.data.score <= 81) ||
-          (request.resource.data.modeId == 'blitz_challenge' && request.resource.data.score <= 81)
+          (request.resource.data.modeId == 'akdeniz' && request.resource.data.score <= 8) ||
+          (request.resource.data.modeId == 'ic_anadolu' && request.resource.data.score <= 13) ||
+          (request.resource.data.modeId == 'karadeniz' && request.resource.data.score <= 18) ||
+          (request.resource.data.modeId == 'dogu_anadolu' && request.resource.data.score <= 14) ||
+          (request.resource.data.modeId == 'guneydogu_anadolu' && request.resource.data.score <= 9)
         );
+    }
+
+    // Users Collection: Users can read any profile, but only write their own user document
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

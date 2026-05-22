@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../features/auth/presentation/auth_notifier.dart';
+import '../../../../features/auth/domain/entities/app_user.dart';
 import '../../domain/entities/game_mode.dart';
 import '../../domain/entities/leaderboard_entry.dart';
 import '../providers/leaderboard_provider.dart';
@@ -181,6 +182,8 @@ class _GlobalLeaderboardTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedMode = ref.watch(activeGameModeProvider);
     final leaderboardAsync = ref.watch(leaderboardStreamProvider);
+    final authState = ref.watch(authProvider);
+    final currentUserId = authState.user?.uid;
 
     return Column(
       children: [
@@ -233,14 +236,14 @@ class _GlobalLeaderboardTab extends ConsumerWidget {
                         const SizedBox(width: 40, child: Text('SIRA', style: _headerStyle)),
                         const Expanded(child: Text('OYUNCU', style: _headerStyle)),
                         SizedBox(
-                          width: 80,
+                          width: 75,
                           child: Text(
                             'ŞEHİR',
                             textAlign: TextAlign.center,
                             style: _headerStyle.copyWith(color: AppColors.primary),
                           ),
                         ),
-                        const SizedBox(width: 80, child: Text('SÜRE', textAlign: TextAlign.center, style: _headerStyle)),
+                        const SizedBox(width: 75, child: Text('SÜRE', textAlign: TextAlign.center, style: _headerStyle)),
                       ],
                     ),
                   ),
@@ -251,7 +254,12 @@ class _GlobalLeaderboardTab extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       itemCount: entries.length,
                       itemBuilder: (context, index) {
-                        return _buildLeaderboardRow(entries[index], index + 1, selectedMode);
+                        return _buildLeaderboardRow(
+                          entries[index],
+                          index + 1,
+                          selectedMode,
+                          currentUserId,
+                        );
                       },
                     ),
                   ),
@@ -410,27 +418,42 @@ class _GlobalLeaderboardTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildLeaderboardRow(LeaderboardEntry entry, int rank, GameMode selectedMode) {
+  Widget _buildLeaderboardRow(
+    LeaderboardEntry entry,
+    int rank,
+    GameMode selectedMode,
+    String? currentUserId,
+  ) {
+    final isCurrentUser = currentUserId != null && entry.userId == currentUserId;
     Color? rowBgColor;
     Widget rankWidget;
 
     if (rank == 1) {
-      rowBgColor = const Color(0xFFFFD700).withValues(alpha: 0.08);
+      rowBgColor = isCurrentUser
+          ? AppColors.primary.withValues(alpha: 0.15)
+          : const Color(0xFFFFD700).withValues(alpha: 0.08);
       rankWidget = const Icon(Icons.emoji_events_rounded, color: Color(0xFFFFD700), size: 24);
     } else if (rank == 2) {
-      rowBgColor = const Color(0xFFC0C0C0).withValues(alpha: 0.08);
+      rowBgColor = isCurrentUser
+          ? AppColors.primary.withValues(alpha: 0.15)
+          : const Color(0xFFC0C0C0).withValues(alpha: 0.08);
       rankWidget = const Icon(Icons.emoji_events_rounded, color: Color(0xFFC0C0C0), size: 24);
     } else if (rank == 3) {
-      rowBgColor = const Color(0xFFCD7F32).withValues(alpha: 0.08);
+      rowBgColor = isCurrentUser
+          ? AppColors.primary.withValues(alpha: 0.15)
+          : const Color(0xFFCD7F32).withValues(alpha: 0.08);
       rankWidget = const Icon(Icons.emoji_events_rounded, color: Color(0xFFCD7F32), size: 24);
     } else {
+      rowBgColor = isCurrentUser
+          ? AppColors.primary.withValues(alpha: 0.15)
+          : null;
       rankWidget = Text(
         '$rank',
         textAlign: TextAlign.center,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: AppColors.textSecondaryDark,
+          fontWeight: isCurrentUser ? FontWeight.w900 : FontWeight.bold,
+          color: isCurrentUser ? AppColors.primary : AppColors.textSecondaryDark,
         ),
       );
     }
@@ -440,63 +463,123 @@ class _GlobalLeaderboardTab extends ConsumerWidget {
     final formattedTime =
         '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
 
+    final borderGlowColor = rank <= 3
+        ? (rank == 1
+            ? const Color(0xFFFFD700)
+            : rank == 2
+                ? const Color(0xFFC0C0C0)
+                : const Color(0xFFCD7F32))
+        : AppColors.primary;
+
+    Widget nameWidget;
+    final hashIndex = entry.name.lastIndexOf('#');
+    if (hashIndex != -1 && hashIndex < entry.name.length - 1) {
+      final baseName = entry.name.substring(0, hashIndex);
+      final tag = entry.name.substring(hashIndex); // '#' işaretini içerir
+      nameWidget = Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          Flexible(
+            child: Text(
+              baseName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: (isCurrentUser || rank <= 3) ? FontWeight.bold : FontWeight.w500,
+                color: isCurrentUser
+                    ? AppColors.primary
+                    : (rank == 1 ? const Color(0xFFFFD700) : AppColors.textPrimaryDark),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            tag,
+            maxLines: 1,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: isCurrentUser
+                  ? AppColors.primary.withValues(alpha: 0.9)
+                  : AppColors.textSecondaryDark.withValues(alpha: 0.9),
+            ),
+          ),
+        ],
+      );
+    } else {
+      nameWidget = Text(
+        entry.name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: (isCurrentUser || rank <= 3) ? FontWeight.bold : FontWeight.w500,
+          color: isCurrentUser
+              ? AppColors.primary
+              : (rank == 1 ? const Color(0xFFFFD700) : AppColors.textPrimaryDark),
+        ),
+      );
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: rowBgColor ?? AppColors.surfaceDark,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: rank <= 3
-              ? (rank == 1
-                      ? const Color(0xFFFFD700)
-                      : rank == 2
-                          ? const Color(0xFFC0C0C0)
-                          : const Color(0xFFCD7F32))
-                  .withValues(alpha: 0.3)
-              : AppColors.surfaceDark,
-          width: 1,
+          color: isCurrentUser
+              ? AppColors.primary
+              : (rank <= 3
+                  ? borderGlowColor.withValues(alpha: 0.3)
+                  : AppColors.surfaceDark),
+          width: isCurrentUser ? 2.0 : 1.0,
         ),
+        boxShadow: isCurrentUser
+            ? [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.25),
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                ),
+              ]
+            : null,
       ),
       child: Row(
         children: [
           SizedBox(width: 32, child: Center(child: rankWidget)),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              entry.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: rank <= 3 ? FontWeight.bold : FontWeight.w500,
-                color: rank == 1 ? const Color(0xFFFFD700) : AppColors.textPrimaryDark,
-              ),
-            ),
+            child: nameWidget,
           ),
+          const SizedBox(width: 8),
           SizedBox(
-            width: 80,
+            width: 75,
             child: Text(
               '${entry.score} / ${selectedMode.maxScore}',
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 15,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: AppColors.success,
               ),
             ),
           ),
+          const SizedBox(width: 8),
           SizedBox(
-            width: 80,
+            width: 75,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.timer_outlined, size: 14, color: AppColors.secondary),
+                const Icon(Icons.timer_outlined, size: 13, color: AppColors.secondary),
                 const SizedBox(width: 4),
                 Text(
                   formattedTime,
                   style: const TextStyle(
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                     fontFamily: 'monospace',
                     color: AppColors.secondary,
@@ -602,7 +685,7 @@ class _MyStatsTab extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Kullanıcı Profil Kartı
-              _buildProfileCard(user?.displayName ?? 'Oyuncu', authState.isGuest),
+              _buildProfileCard(user, authState.isGuest),
               const SizedBox(height: 20),
 
               // Özet istatistik kartları
@@ -635,7 +718,51 @@ class _MyStatsTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildProfileCard(String displayName, bool isGuest) {
+  Widget _buildProfileCard(AppUser? user, bool isGuest) {
+    final displayName = user?.displayName ?? 'Oyuncu';
+    final shortTag = user?.shortTag ?? '';
+    final photoUrl = user?.photoUrl;
+
+    Widget avatarWidget;
+    if (photoUrl != null && photoUrl.isNotEmpty) {
+      avatarWidget = Container(
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(26),
+          child: Image.network(
+            photoUrl,
+            width: 52,
+            height: 52,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                width: 52,
+                height: 52,
+                color: AppColors.primary.withValues(alpha: 0.2),
+                child: const Icon(Icons.person_rounded, color: AppColors.primary, size: 28),
+              );
+            },
+          ),
+        ),
+      );
+    } else {
+      avatarWidget = Container(
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.2),
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+        ),
+        child: const Icon(Icons.person_rounded, color: AppColors.primary, size: 28),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -652,28 +779,39 @@ class _MyStatsTab extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
-            ),
-            child: const Icon(Icons.person_rounded, color: AppColors.primary, size: 28),
-          ),
+          avatarWidget,
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  displayName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimaryDark,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        displayName,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimaryDark,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (shortTag.isNotEmpty) ...[
+                      const SizedBox(width: 4),
+                      Text(
+                        '#$shortTag',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textSecondaryDark.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Container(

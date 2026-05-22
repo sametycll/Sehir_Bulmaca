@@ -17,6 +17,8 @@ import 'package:sehir_bulmaca/features/achievements/presentation/controllers/ach
 import 'package:sehir_bulmaca/features/achievements/presentation/widgets/achievement_unlock_overlay.dart';
 import 'package:sehir_bulmaca/features/progression/presentation/providers/progression_provider.dart';
 import 'package:sehir_bulmaca/features/progression/domain/entities/xp_event.dart';
+import 'package:sehir_bulmaca/features/progression/domain/entities/player_progress.dart';
+import 'package:sehir_bulmaca/features/progression/presentation/widgets/xp_progress_dialog.dart';
 import 'package:sehir_bulmaca/features/progression/presentation/providers/level_up_queue_provider.dart';
 
 
@@ -29,6 +31,8 @@ class GameScreen extends ConsumerStatefulWidget {
 }
 
 class _GameScreenState extends ConsumerState<GameScreen> {
+  PlayerProgress? _initialProgress;
+
   @override
   void initState() {
     super.initState();
@@ -41,7 +45,19 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   void _startNewGame() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _initialProgress = ref.read(progressionProvider).valueOrNull;
+      if (_initialProgress == null) {
+        try {
+          _initialProgress = await ref.read(progressionProvider.future);
+          debugPrint('🎬 [XP-DEBUG] Initial progress loaded asynchronously: level=${_initialProgress?.level}, totalXp=${_initialProgress?.totalXp}');
+        } catch (e) {
+          debugPrint('🔴 [XP-DEBUG] Error loading initial progress: $e');
+        }
+      } else {
+        debugPrint('🎬 [XP-DEBUG] Initial progress captured: level=${_initialProgress?.level}, totalXp=${_initialProgress?.totalXp}');
+      }
+
       final mode = ref.read(playGameModeProvider);
 
       // Bölgesel mod ise sadece o bölgenin il plaka kodlarını kullan
@@ -64,6 +80,60 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
       ref.read(gameProvider.notifier).initGame(normalizedCities, mode);
     });
+  }
+
+  Future<void> _processXpAndShowDialog(GameState finalState, VoidCallback onComplete) async {
+    final isCompleted = finalState.foundCities.length == finalState.allCities.length || finalState.gameMode.isTimedMode;
+    if (isCompleted) {
+      try {
+        debugPrint('🎬 [XP-DEBUG] Game completed! Awarding completion XP...');
+        await ref.read(progressionProvider.notifier).trackEvent(
+          GameCompletedXpEvent(
+            modeId: finalState.gameMode.id,
+            isRegion: finalState.gameMode.isRegional,
+          ),
+        );
+      } catch (e) {
+        debugPrint('🔴 [XP-DEBUG] Error tracking completion XP: $e');
+      }
+    }
+
+    // Get updated progress
+    final newProgress = ref.read(progressionProvider).valueOrNull;
+    
+    // Clear level up queue so it doesn't trigger secondary overlays
+    ref.read(levelUpQueueProvider.notifier).clearAll();
+
+    var prevProgress = _initialProgress;
+    if (prevProgress == null && newProgress != null) {
+      prevProgress = newProgress;
+    }
+
+    if (prevProgress != null && newProgress != null) {
+      final prevLevel = prevProgress.level;
+      final prevTotalXp = prevProgress.totalXp;
+      final newLevel = newProgress.level;
+      final newTotalXp = newProgress.totalXp;
+      final xpGained = newTotalXp - prevTotalXp;
+
+      debugPrint('🎬 [XP-DEBUG] Showing XpProgressDialog: prevLevel=$prevLevel, prevTotalXp=$prevTotalXp, newLevel=$newLevel, newTotalXp=$newTotalXp, xpGained=$xpGained');
+
+      if (mounted) {
+        await showXpProgressDialog(
+          context: context,
+          previousLevel: prevLevel,
+          previousTotalXp: prevTotalXp,
+          newLevel: newLevel,
+          newTotalXp: newTotalXp,
+          xpGained: xpGained,
+          onDismissed: onComplete,
+        );
+        return;
+      }
+    }
+
+    debugPrint('🎬 [XP-DEBUG] Fallback to direct navigation');
+    onComplete();
   }
 
   @override
@@ -100,6 +170,22 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         }
       }
     });
+
+    // Level-up popup listener — disabled in favor of XpProgressDialog at game end
+    // ref.listen<List<LevelUpDetails>>(levelUpQueueProvider, (previous, next) {
+    //   debugPrint('🔔 [GAMESCREEN-DEBUG] levelUpQueue listener fired! prev=${previous?.length}, next=${next.length}');
+    //   if (next.isNotEmpty) {
+    //     final queueNotifier = ref.read(levelUpQueueProvider.notifier);
+    //     debugPrint('🔔 [GAMESCREEN-DEBUG] Queue not empty. isShowing=${queueNotifier.isShowing}');
+    //     if (!queueNotifier.isShowing) {
+    //       debugPrint('🔔 [GAMESCREEN-DEBUG] Not showing yet, will show popup now!');
+    //       queueNotifier.markAsShowing();
+    //       _showLevelUpPopup(context, next.first);
+    //     } else {
+    //       debugPrint('🔔 [GAMESCREEN-DEBUG] Already showing, skipping.');
+    //     }
+    //   }
+    // });
 
     return PopScope(
       canPop: false,
@@ -320,6 +406,39 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     });
   }
 
+  // Commented out unused method _showLevelUpPopup in favor of XpProgressDialog
+  // void _showLevelUpPopup(BuildContext context, LevelUpDetails details) {
+  //   debugPrint('🎆 [POPUP-DEBUG] _showLevelUpPopup called: ${details.fromLevel} -> ${details.toLevel}');
+  //   final overlayState = Overlay.of(context);
+  //   debugPrint('🎆 [POPUP-DEBUG] Got overlayState: $overlayState, mounted=${overlayState.mounted}');
+  //   late OverlayEntry entry;
+  //   entry = createLevelUpOverlayEntry(
+  //     details: details,
+  //     onFinished: () {
+  //       debugPrint('🎆 [POPUP-DEBUG] onFinished called for ${details.fromLevel} -> ${details.toLevel}');
+  //       ref.read(levelUpQueueProvider.notifier).dequeue();
+  //       final remaining = ref.read(levelUpQueueProvider);
+  //       if (remaining.isNotEmpty) {
+  //         WidgetsBinding.instance.addPostFrameCallback((_) {
+  //           if (context.mounted) {
+  //             ref.read(levelUpQueueProvider.notifier).markAsShowing();
+  //             _showLevelUpPopup(context, remaining.first);
+  //           }
+  //         });
+  //       }
+  //     },
+  //   );
+  //   WidgetsBinding.instance.addPostFrameCallback((_) {
+  //     debugPrint('🎆 [POPUP-DEBUG] addPostFrameCallback fired. context.mounted=${context.mounted}');
+  //     if (context.mounted) {
+  //       overlayState.insert(entry);
+  //       debugPrint('🎆 [POPUP-DEBUG] ✅ Overlay entry INSERTED!');
+  //     } else {
+  //       debugPrint('🎆 [POPUP-DEBUG] ❌ Context not mounted, skipping insert!');
+  //     }
+  //   });
+  // }
+
   void _showFloatingNotification(BuildContext context, String cityName, int combo) {
 
     final overlayState = Overlay.of(context);
@@ -368,7 +487,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   void _showExitConfirmation(BuildContext context) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           backgroundColor: AppColors.surfaceDark,
           title: const Text('Oyundan Çık'),
@@ -376,13 +495,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           actions: [
             TextButton(
               child: const Text('VAZGEÇ', style: TextStyle(color: AppColors.textSecondaryDark)),
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.of(dialogContext).pop(),
             ),
             TextButton(
               child: const Text('ÇIK', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
               onPressed: () {
-                Navigator.of(context).pop();
-                context.go('/');
+                Navigator.of(dialogContext).pop();
+                if (context.mounted) {
+                  context.go('/');
+                }
               },
             ),
           ],
@@ -395,7 +516,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           backgroundColor: AppColors.surfaceDark,
           title: const Row(
@@ -412,12 +533,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           actions: [
             TextButton(
               child: const Text('VAZGEÇ', style: TextStyle(color: AppColors.textSecondaryDark)),
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.of(dialogContext).pop(),
             ),
             TextButton(
               child: const Text('OYUNU BİTİR', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
                 ref.read(gameProvider.notifier).manualFinishGame();
               },
             ),
@@ -451,9 +572,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return StatefulBuilder(
-          builder: (context, setState) {
+          builder: (builderContext, setState) {
             final name = nameController.text.trim();
             final bool isButtonEnabled = name.isNotEmpty;
 
@@ -599,37 +720,20 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                               throw submitState.error ?? Exception('Bilinmeyen bir hata oluştu.');
                             }
 
-                            if (context.mounted) {
-                              Navigator.of(context).pop(); // Close dialog
-                              
-                              // Oyun sonu XP'sini ver
-                              try {
-                                final isCompleted = finalState.foundCities.length == finalState.allCities.length || finalState.gameMode.isTimedMode;
-                                if (isCompleted) {
-                                  await ref.read(progressionProvider.notifier).trackEvent(
-                                    GameCompletedXpEvent(
-                                      modeId: finalState.gameMode.id,
-                                      isRegion: finalState.gameMode.isRegional,
-                                    ),
-                                  );
+                            if (builderContext.mounted) {
+                              Navigator.of(builderContext).pop(); // Close dialog
+                              await _processXpAndShowDialog(finalState, () {
+                                if (context.mounted) {
+                                  context.go('/leaderboard'); // Go to leaderboard
                                 }
-                              } catch (_) {}
-                              
-                              // Seviye popuplarını göster ve bittiğinde yönlendir
-                              ref.read(levelUpQueueProvider.notifier).startProcessing(
-                                onComplete: () {
-                                  if (context.mounted) {
-                                    context.go('/leaderboard'); // Go to leaderboard
-                                  }
-                                },
-                              );
+                              });
                             }
                           } catch (e) {
-                            if (context.mounted) {
+                            if (builderContext.mounted) {
                               setState(() {
                                 isSaving = false;
                               });
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              ScaffoldMessenger.of(builderContext).showSnackBar(
                                 SnackBar(
                                   content: Text('Hata: $e'),
                                   backgroundColor: AppColors.error,
@@ -664,27 +768,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () async {
-                          Navigator.of(context).pop();
-                          
-                          // Oyun sonu XP'sini ver
-                          try {
-                            final isCompleted = finalState.foundCities.length == finalState.allCities.length || finalState.gameMode.isTimedMode;
-                            if (isCompleted) {
-                              await ref.read(progressionProvider.notifier).trackEvent(
-                                GameCompletedXpEvent(
-                                  modeId: finalState.gameMode.id,
-                                  isRegion: finalState.gameMode.isRegional,
-                                ),
-                              );
-                            }
-                          } catch (_) {}
-                          
-                          // Seviye popuplarını göster ve bittiğinde yeni oyun başlat
-                          ref.read(levelUpQueueProvider.notifier).startProcessing(
-                            onComplete: () {
-                              _startNewGame();
-                            },
-                          );
+                          Navigator.of(builderContext).pop();
+                          await _processXpAndShowDialog(finalState, () {
+                            _startNewGame();
+                          });
                         },
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: AppColors.primary),
@@ -699,29 +786,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     Expanded(
                       child: TextButton(
                         onPressed: () async {
-                          Navigator.of(context).pop();
-
-                          // Oyun sonu XP'sini ver
-                          try {
-                            final isCompleted = finalState.foundCities.length == finalState.allCities.length || finalState.gameMode.isTimedMode;
-                            if (isCompleted) {
-                              await ref.read(progressionProvider.notifier).trackEvent(
-                                GameCompletedXpEvent(
-                                  modeId: finalState.gameMode.id,
-                                  isRegion: finalState.gameMode.isRegional,
-                                ),
-                              );
+                          Navigator.of(builderContext).pop();
+                          await _processXpAndShowDialog(finalState, () {
+                            if (context.mounted) {
+                              context.go('/');
                             }
-                          } catch (_) {}
-
-                          // Seviye popuplarını göster ve bittiğinde ana sayfaya git
-                          ref.read(levelUpQueueProvider.notifier).startProcessing(
-                            onComplete: () {
-                              if (context.mounted) {
-                                context.go('/');
-                              }
-                            },
-                          );
+                          });
                         },
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.textSecondaryDark,

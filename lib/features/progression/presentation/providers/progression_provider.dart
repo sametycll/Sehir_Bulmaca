@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/player_progress.dart';
@@ -74,20 +75,30 @@ class ProgressionNotifier extends AsyncNotifier<PlayerProgress> {
   /// optimistic: Yerel cache ve state anında güncellenir.
   /// debounced: Firestore senkronizasyonu 3 saniye ertelenerek spam write önlenir.
   Future<void> trackEvent(XpEvent event) async {
+    debugPrint('🟡 [LEVEL-DEBUG] trackEvent called: ${event.runtimeType}, sourceId=${event.sourceId}');
+    
     final currentProgress = state.valueOrNull;
     if (currentProgress == null || currentProgress.uid.isEmpty) {
+      debugPrint('🔴 [LEVEL-DEBUG] Progress state not ready! valueOrNull=$currentProgress, uid=${currentProgress?.uid}');
       developer.log('[ProgressionProvider] Progress state not ready or anonymous, skipping event.');
       return;
     }
 
+    debugPrint('🟢 [LEVEL-DEBUG] Current progress: level=${currentProgress.level}, totalXp=${currentProgress.totalXp}, uid=${currentProgress.uid}');
+
     // 1. XP Engine ile ödül miktarını hesapla
     final xpResult = XpEngine.instance.evaluate(event);
-    if (!xpResult.hasReward) return;
+    debugPrint('🟢 [LEVEL-DEBUG] XP result: xp=${xpResult.xp}, hasReward=${xpResult.hasReward}, desc=${xpResult.description}');
+    if (!xpResult.hasReward) {
+      debugPrint('🔴 [LEVEL-DEBUG] No XP reward, skipping.');
+      return;
+    }
 
     final newTotalXp = currentProgress.totalXp + xpResult.xp;
     final newLevel = LevelCalculator.calculateLevel(newTotalXp);
     
     final levelUpOccurred = newLevel > currentProgress.level;
+    debugPrint('🟢 [LEVEL-DEBUG] newTotalXp=$newTotalXp, newLevel=$newLevel, oldLevel=${currentProgress.level}, levelUpOccurred=$levelUpOccurred');
 
     // 2. Seviyeye göre XP detaylarını güncelle
     final totalXpToReachCurrent = LevelCalculator.totalXpToReachLevel(newLevel);
@@ -108,18 +119,22 @@ class ProgressionNotifier extends AsyncNotifier<PlayerProgress> {
 
     // 4. Seviye atlama kontrolü
     if (levelUpOccurred) {
+      debugPrint('🎉 [LEVEL-DEBUG] LEVEL UP DETECTED! ${currentProgress.level} -> $newLevel');
       developer.log('[Progression] Level Up! ${currentProgress.level} -> $newLevel');
       
       // Çoklu seviye atlama desteği: Her bir seviye geçişini tek tek kuyruğa ekle
       for (int i = currentProgress.level; i < newLevel; i++) {
-        ref.read(levelUpQueueProvider.notifier).enqueue(
-              LevelUpDetails(
-                fromLevel: i,
-                toLevel: i + 1,
-                titleGained: LevelCalculator.getTitle(i + 1),
-              ),
-            );
+        final details = LevelUpDetails(
+          fromLevel: i,
+          toLevel: i + 1,
+          titleGained: LevelCalculator.getTitle(i + 1),
+        );
+        debugPrint('🎉 [LEVEL-DEBUG] Enqueuing level up: ${details.fromLevel} -> ${details.toLevel}, title=${details.titleGained}');
+        ref.read(levelUpQueueProvider.notifier).enqueue(details);
       }
+      
+      final queueSize = ref.read(levelUpQueueProvider).length;
+      debugPrint('🎉 [LEVEL-DEBUG] Queue size after enqueue: $queueSize');
     } else {
       // Normal XP kazanım sesi
       AudioService.playCorrect();

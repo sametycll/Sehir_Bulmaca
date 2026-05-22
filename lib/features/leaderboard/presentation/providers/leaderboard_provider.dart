@@ -8,6 +8,8 @@ import '../../data/repositories/firestore_leaderboard_repository.dart';
 import '../../data/local_leaderboard_service.dart';
 import '../../../achievements/domain/entities/achievement_event.dart';
 import '../../../achievements/presentation/providers/achievement_provider.dart';
+import '../../../auth/presentation/auth_notifier.dart';
+import '../../../auth/domain/entities/app_user.dart';
 
 // Firebase core providers
 final firestoreProvider = Provider<FirebaseFirestore>((ref) => FirebaseFirestore.instance);
@@ -31,9 +33,9 @@ final leaderboardStreamProvider = StreamProvider.autoDispose<List<LeaderboardEnt
 
 // Provider for current user's personal stats across ALL game modes (fetched once)
 final myStatsProvider = FutureProvider.autoDispose<List<LeaderboardEntry>>((ref) async {
-  final auth = ref.watch(firebaseAuthProvider);
+  final authState = ref.watch(authProvider);
   final firestore = ref.watch(firestoreProvider);
-  final userId = auth.currentUser?.uid;
+  final userId = authState.user?.uid;
   if (userId == null) return [];
 
   final snapshot = await firestore
@@ -67,27 +69,29 @@ class LeaderboardNotifier extends AsyncNotifier<void> {
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final auth = ref.read(firebaseAuthProvider);
       final repository = ref.read(leaderboardRepositoryProvider);
 
-      User? currentUser = auth.currentUser;
+      var authState = ref.read(authProvider);
+      AppUser? appUser = authState.user;
       
       // If user is not authenticated, sign them in anonymously
-      if (currentUser == null) {
-        final userCredential = await auth.signInAnonymously();
-        currentUser = userCredential.user;
+      if (appUser == null) {
+        await ref.read(authProvider.notifier).signInAsGuest();
+        authState = ref.read(authProvider);
+        appUser = authState.user;
       }
 
-      if (currentUser == null) {
+      if (appUser == null) {
         throw Exception("Auth authentication failed. Unable to identify user.");
       }
 
       final entry = LeaderboardEntry.create(
-        userId: currentUser.uid,
-        name: name.trim().isEmpty ? 'Misafir' : name.trim(),
+        userId: appUser.uid,
+        name: appUser.leaderboardName,
         modeId: mode.id,
         score: score,
         elapsedTime: elapsedTime,
+        photoUrl: appUser.photoUrl,
       );
 
       // 1. Submit globally to Firestore
