@@ -295,45 +295,40 @@ class _LevelUpOverlayWidgetState extends State<LevelUpOverlayWidget>
                               ],
                             ),
                             const SizedBox(height: 8),
-                            Stack(
-                              children: [
-                                // Arka plan
-                                Container(
-                                  height: 10,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.08),
-                                    borderRadius: BorderRadius.circular(5),
-                                  ),
-                                ),
-                                // Doldurulan bar
-                                AnimatedBuilder(
-                                  animation: _progressBarAnimation,
-                                  builder: (context, child) {
-                                    return FractionallySizedBox(
-                                      widthFactor: _progressBarAnimation.value,
-                                      child: Container(
-                                        height: 10,
-                                        decoration: BoxDecoration(
-                                          gradient: const LinearGradient(
-                                            colors: [
-                                              AppColors.secondary,
-                                              Color(0xFFFFD700), // Gold transition
-                                            ],
-                                          ),
-                                          borderRadius: BorderRadius.circular(5),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: AppColors.secondary.withValues(alpha: 0.5),
-                                              blurRadius: 10,
-                                              spreadRadius: 1,
-                                            ),
+                            Container(
+                              height: 10,
+                              alignment: Alignment.centerLeft,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              child: AnimatedBuilder(
+                                animation: _progressBarAnimation,
+                                builder: (context, child) {
+                                  return FractionallySizedBox(
+                                    widthFactor: _progressBarAnimation.value,
+                                    heightFactor: 1.0,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [
+                                            AppColors.secondary,
+                                            Color(0xFFFFD700), // Gold transition
                                           ],
                                         ),
+                                        borderRadius: BorderRadius.circular(5),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppColors.secondary.withValues(alpha: 0.5),
+                                            blurRadius: 10,
+                                            spreadRadius: 1,
+                                          ),
+                                        ],
                                       ),
-                                    );
-                                  },
-                                ),
-                              ],
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
                           ],
                         ),

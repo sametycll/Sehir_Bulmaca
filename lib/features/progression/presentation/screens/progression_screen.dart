@@ -397,7 +397,7 @@ class ProgressionScreen extends ConsumerWidget {
                       delegate: SliverChildListDelegate(
                         [
                           _buildGuideCard(
-                            title: 'Şehir Bulma',
+                            title: 'Şehir Bulmaca',
                             value: '+10 XP',
                             subtitle: 'Her doğru tahmin',
                             icon: Icons.location_on_rounded,

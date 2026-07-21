@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/achievement.dart';
 import '../../domain/entities/enums.dart';
+import '../utils/achievement_icon_helper.dart';
 
 /// Achievement listesinde kullanılan kart widget'ı.
 ///
@@ -70,10 +71,7 @@ class AchievementCard extends StatelessWidget {
                           size: 26,
                         )
                       : Icon(
-                          IconData(
-                            achievement.iconCodePoint,
-                            fontFamily: 'MaterialIcons',
-                          ),
+                          getAchievementIcon(achievement.iconCodePoint),
                           color: rarityColor,
                           size: 28,
                         ),

@@ -7,6 +7,7 @@ import '../../features/leaderboard/presentation/screens/leaderboard_screen.dart'
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/achievements/presentation/screens/achievements_screen.dart';
 import '../../features/progression/presentation/screens/progression_screen.dart';
+import '../../features/daily_system/presentation/screens/daily_missions_screen.dart';
 
 class FirebaseAuthListenable extends ChangeNotifier {
   FirebaseAuthListenable() {
@@ -59,6 +60,10 @@ class AppRouter {
       GoRoute(
         path: '/progression',
         builder: (context, state) => const ProgressionScreen(),
+      ),
+      GoRoute(
+        path: '/daily',
+        builder: (context, state) => const DailyMissionsScreen(),
       ),
     ],
   );

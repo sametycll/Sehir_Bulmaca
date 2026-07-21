@@ -36,6 +36,7 @@ class XpBarWidget extends StatelessWidget {
           builder: (context, value, child) {
             return Container(
               height: height,
+              alignment: Alignment.centerLeft,
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(height / 2),
@@ -44,31 +45,27 @@ class XpBarWidget extends StatelessWidget {
                   width: 1,
                 ),
               ),
-              child: Stack(
-                children: [
-                  // Doluluk Alanı ve Neon Glow
-                  FractionallySizedBox(
-                    widthFactor: value,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            barColor,
-                            barColor.withValues(alpha: 0.7),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(height / 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: barColor.withValues(alpha: 0.35),
-                            blurRadius: 8,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                      ),
+              child: FractionallySizedBox(
+                widthFactor: value,
+                heightFactor: 1.0,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        barColor,
+                        barColor.withValues(alpha: 0.7),
+                      ],
                     ),
+                    borderRadius: BorderRadius.circular(height / 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: barColor.withValues(alpha: 0.35),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             );
           },

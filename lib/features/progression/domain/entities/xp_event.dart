@@ -56,3 +56,14 @@ class DailyStreakXpEvent extends XpEvent {
 
   DailyStreakXpEvent({required this.streakCount}) : super('daily_streak');
 }
+
+/// Günlük görev tamamlama olayı.
+class DailyMissionCompletedXpEvent extends XpEvent {
+  final String missionId;
+  final int xpReward;
+
+  DailyMissionCompletedXpEvent({
+    required this.missionId,
+    required this.xpReward,
+  }) : super('daily_mission_completed');
+}

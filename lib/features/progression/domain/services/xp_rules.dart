@@ -114,3 +114,14 @@ class DailyStreakXpRule extends XpRule<DailyStreakXpEvent> {
   @override
   String getDescription(DailyStreakXpEvent event) => '${event.streakCount} Günlük Seri Giriş Bonusu ⚡';
 }
+
+/// Günlük görev tamamlama XP kuralı.
+class DailyMissionCompletedXpRule extends XpRule<DailyMissionCompletedXpEvent> {
+  const DailyMissionCompletedXpRule();
+
+  @override
+  int calculateXp(DailyMissionCompletedXpEvent event) => event.xpReward;
+
+  @override
+  String getDescription(DailyMissionCompletedXpEvent event) => 'Günlük Görev Tamamlandı! 🎯';
+}

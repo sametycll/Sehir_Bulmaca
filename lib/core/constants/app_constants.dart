@@ -1,12 +1,12 @@
 class AppConstants {
-  static const String appName = 'Türkiye Şehir Bulma';
+  static const String appName = 'Şehir Bulmaca';
   
   // Game Config
   static const int totalCities = 81;
   static const Duration gameTimerInterval = Duration(seconds: 1);
   
   // Firebase Collections
-  static const String leaderboardCollection = 'leaderboard';
+  static const String leaderboardCollection = 'leaderboards';
   static const String usersCollection = 'users';
 
   // Animation Durations

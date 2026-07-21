@@ -33,7 +33,7 @@ class SehirBulmacaApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Türkiye Şehir Bulmaca',
+      title: 'Şehir Bulmaca',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

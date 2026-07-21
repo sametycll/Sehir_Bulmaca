@@ -366,55 +366,52 @@ class _XpProgressDialogState extends State<XpProgressDialog>
                             ],
                           ),
                           const SizedBox(height: 8),
-                          Stack(
-                            children: [
-                              Container(
-                                height: 12,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                              ),
-                              AnimatedBuilder(
-                                animation: _progressAnimation,
-                                builder: (context, child) {
-                                  final double fillFraction;
-                                  if (_isLevelUp) {
-                                    // Seviye atlandıysa: 0 → yeni seviyedeki ilerleme
-                                    fillFraction = _progressAnimation.value * endFraction;
-                                  } else {
-                                    // Normal ilerleme: eski → yeni
-                                    fillFraction = startFraction +
-                                        (_progressAnimation.value *
-                                            (endFraction - startFraction));
-                                  }
-                                  return FractionallySizedBox(
-                                    widthFactor: fillFraction.clamp(0.0, 1.0),
-                                    child: Container(
-                                      height: 12,
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: _isLevelUp
-                                              ? [AppColors.secondary, const Color(0xFFFFD700)]
-                                              : [const Color(0xFF10B981), const Color(0xFF34D399)],
-                                        ),
-                                        borderRadius: BorderRadius.circular(6),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: (_isLevelUp
-                                                    ? AppColors.secondary
-                                                    : const Color(0xFF10B981))
-                                                .withValues(alpha: 0.5),
-                                            blurRadius: 8,
-                                            spreadRadius: 1,
-                                          ),
-                                        ],
+                          Container(
+                            height: 12,
+                            alignment: Alignment.centerLeft,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: AnimatedBuilder(
+                              animation: _progressAnimation,
+                              builder: (context, child) {
+                                final double fillFraction;
+                                if (_isLevelUp) {
+                                  // Seviye atlandıysa: 0 → yeni seviyedeki ilerleme
+                                  fillFraction = _progressAnimation.value * endFraction;
+                                } else {
+                                  // Normal ilerleme: eski → yeni
+                                  fillFraction = startFraction +
+                                      (_progressAnimation.value *
+                                          (endFraction - startFraction));
+                                }
+                                return FractionallySizedBox(
+                                  widthFactor: fillFraction.clamp(0.0, 1.0),
+                                  heightFactor: 1.0,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: _isLevelUp
+                                            ? [AppColors.secondary, const Color(0xFFFFD700)]
+                                            : [const Color(0xFF10B981), const Color(0xFF34D399)],
                                       ),
+                                      borderRadius: BorderRadius.circular(6),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: (_isLevelUp
+                                                  ? AppColors.secondary
+                                                  : const Color(0xFF10B981))
+                                              .withValues(alpha: 0.5),
+                                          blurRadius: 8,
+                                          spreadRadius: 1,
+                                        ),
+                                      ],
                                     ),
-                                  );
-                                },
-                              ),
-                            ],
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ],
                       ),

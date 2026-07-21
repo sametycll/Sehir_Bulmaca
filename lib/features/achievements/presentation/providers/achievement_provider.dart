@@ -18,6 +18,8 @@ import '../../../leaderboard/presentation/providers/leaderboard_provider.dart'
     show firestoreProvider;
 import '../../../progression/domain/entities/xp_event.dart';
 import '../../../progression/presentation/providers/progression_provider.dart';
+import '../../../daily_system/presentation/providers/daily_notifier.dart';
+import '../../../daily_system/domain/entities/mission_event.dart';
 
 // ─────────────────────────────────────────────────────────────────
 // INFRASTRUCTURE PROVIDERS
@@ -169,6 +171,11 @@ class AchievementProgressNotifier
           achievementId: achievementId,
           xpReward: def.xpReward,
         ),
+      );
+
+      // Daily system event tetikleme
+      ref.read(dailyStateProvider.notifier).triggerEvent(
+        const AchievementUnlockedMissionEvent(),
       );
     } catch (_) {}
 

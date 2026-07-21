@@ -8,6 +8,8 @@ import '../../../achievements/domain/entities/achievement_event.dart';
 import '../../../achievements/presentation/providers/achievement_provider.dart';
 import '../../../progression/domain/entities/xp_event.dart';
 import '../../../progression/presentation/providers/progression_provider.dart';
+import '../../../daily_system/presentation/providers/daily_notifier.dart';
+import '../../../daily_system/domain/entities/mission_event.dart';
 import 'game_state.dart';
 
 final playGameModeProvider = StateProvider<GameMode>((ref) => GameMode.allTurkey);
@@ -178,6 +180,22 @@ class GameNotifier extends AutoDisposeNotifier<GameState> {
           isAllFound: state.foundCities.length == state.allCities.length,
         ),
       );
+
+      // Daily system event tetikleme
+      ref.read(dailyStateProvider.notifier).triggerEvent(
+        GameCompletedMissionEvent(
+          modeId: state.gameMode.id,
+          score: state.foundCities.length,
+        ),
+      );
+
+      // Süre takibi (dakika bazlı)
+      final playMinutes = (state.elapsedTime / 60).ceil();
+      if (playMinutes > 0) {
+        ref.read(dailyStateProvider.notifier).triggerEvent(
+          PlayTimeMissionEvent(minutes: playMinutes),
+        );
+      }
     } catch (_) {}
   }
 
@@ -188,6 +206,14 @@ class GameNotifier extends AutoDisposeNotifier<GameState> {
       if (comboCount >= 2) {
         progressionNotifier.trackEvent(ComboXpEvent(comboCount: comboCount));
       }
+
+      // Daily system event tetikleme
+      ref.read(dailyStateProvider.notifier).triggerEvent(
+        CityFoundMissionEvent(
+          modeId: state.gameMode.id,
+          comboCount: comboCount,
+        ),
+      );
     } catch (_) {}
   }
 }

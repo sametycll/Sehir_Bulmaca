@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/achievement.dart';
 import '../../domain/entities/enums.dart';
+import '../utils/achievement_icon_helper.dart';
 
 /// Achievement detay bottom sheet modal.
 ///
@@ -78,10 +79,7 @@ class _AchievementDetailModal extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.25),
                   )
                 : Icon(
-                    IconData(
-                      achievement.iconCodePoint,
-                      fontFamily: 'MaterialIcons',
-                    ),
+                    getAchievementIcon(achievement.iconCodePoint),
                     size: 40,
                     color: rarityColor,
                   ),

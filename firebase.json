@@ -1,1 +1,28 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"sehir-bulmaca","appId":"1:256802678371:android:0641833a9be699ee153a56","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"sehir-bulmaca","configurations":{"android":"1:256802678371:android:0641833a9be699ee153a56","ios":"1:256802678371:ios:cb59957e313063e5153a56","macos":"1:256802678371:ios:cb59957e313063e5153a56","web":"1:256802678371:web:288e08e4bc272b14153a56","windows":"1:256802678371:web:5e01e47abecea58f153a56"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "sehir-bulmaca",
+          "appId": "1:256802678371:android:0641833a9be699ee153a56",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "sehir-bulmaca",
+          "configurations": {
+            "android": "1:256802678371:android:0641833a9be699ee153a56",
+            "ios": "1:256802678371:ios:cb59957e313063e5153a56",
+            "macos": "1:256802678371:ios:cb59957e313063e5153a56",
+            "web": "1:256802678371:web:288e08e4bc272b14153a56",
+            "windows": "1:256802678371:web:5e01e47abecea58f153a56"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

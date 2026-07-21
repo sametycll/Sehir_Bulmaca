@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/achievement.dart';
 import '../../domain/entities/enums.dart';
+import '../utils/achievement_icon_helper.dart';
 
 /// Oyun içi achievement unlock overlay widget'ı.
 ///
@@ -161,10 +162,7 @@ class _AchievementUnlockOverlayState extends State<AchievementUnlockOverlay>
               ),
             ),
             child: Icon(
-              IconData(
-                widget.achievement.iconCodePoint,
-                fontFamily: 'MaterialIcons',
-              ),
+              getAchievementIcon(widget.achievement.iconCodePoint),
               color: rarityColor,
               size: 26,
             ),

@@ -15,6 +15,8 @@ import 'level_up_queue_provider.dart';
 import '../../../game/infrastructure/services/audio_service.dart';
 import '../../../leaderboard/presentation/providers/leaderboard_provider.dart'
     show firestoreProvider;
+import '../../../daily_system/presentation/providers/daily_notifier.dart';
+import '../../../daily_system/domain/entities/mission_event.dart';
 
 // ─────────────────────────────────────────────────────────────────
 // INFRASTRUCTURE PROVIDERS
@@ -142,6 +144,15 @@ class ProgressionNotifier extends AsyncNotifier<PlayerProgress> {
 
     // 5. Uçan XP Metni Gösterimi (Global Overlay tetiklemesi)
     _triggerXpFloatingText(xpResult.xp, event.sourceId == 'combo' || event.sourceId == 'game_completed');
+
+    // 5b. Günlük sistem XP görevini tetikle (Sonsuz döngüyü önlemek için günlük görev/streak XP'leri hariç)
+    if (event is! DailyMissionCompletedXpEvent && event is! DailyStreakXpEvent) {
+      try {
+        ref.read(dailyStateProvider.notifier).triggerEvent(
+          XpEarnedMissionEvent(amount: xpResult.xp),
+        );
+      } catch (_) {}
+    }
 
     // 6. Firestore Senkronizasyonunu Debounce Et (3 saniye)
     _scheduleFirestoreSave(updatedProgress);

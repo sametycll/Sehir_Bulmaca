@@ -10,6 +10,9 @@ import '../../game/presentation/providers/game_notifier.dart';
 import '../../progression/presentation/providers/progression_provider.dart';
 import '../../progression/domain/services/level_calculator.dart';
 import '../../progression/presentation/widgets/xp_bar_widget.dart';
+import '../../daily_system/presentation/providers/daily_notifier.dart';
+import '../../daily_system/presentation/widgets/mission_complete_overlay.dart';
+import '../../daily_system/domain/entities/daily_mission.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -68,6 +71,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Tamamlanan günlük görevlerin overlay olarak gösterilmesini dinle
+    ref.listen<List<DailyMission>>(completedMissionsQueueProvider, (previous, next) {
+      if (next.isNotEmpty) {
+        MissionCompleteOverlayService.checkAndShowNext(context, ref);
+      }
+    });
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -286,6 +296,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   'BAŞARIMLAR',
                                   style: TextStyle(
                                     color: AppColors.secondary,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          PremiumMenuButton(
+                            onPressed: () => context.push('/daily'),
+                            isPrimary: false,
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.wb_sunny_rounded,
+                                    color: Colors.amber, size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  'GÜNLÜK GÖREVLER',
+                                  style: TextStyle(
+                                    color: Colors.amber,
                                     fontSize: 15,
                                     fontWeight: FontWeight.bold,
                                     letterSpacing: 1.2,

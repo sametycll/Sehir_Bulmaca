@@ -5,6 +5,7 @@ import '../../domain/entities/enums.dart';
 import '../providers/achievement_provider.dart';
 import '../widgets/achievement_card.dart';
 import '../widgets/achievement_detail_modal.dart';
+import '../utils/achievement_icon_helper.dart';
 
 /// Achievement listesi ekranı.
 ///
@@ -295,7 +296,7 @@ class _CategoryChip extends StatelessWidget {
           children: [
             if (iconCodePoint != null) ...[
               Icon(
-                IconData(iconCodePoint!, fontFamily: 'MaterialIcons'),
+                getAchievementIcon(iconCodePoint!),
                 size: 13,
                 color: isSelected ? AppColors.primary : AppColors.textSecondaryDark,
               ),

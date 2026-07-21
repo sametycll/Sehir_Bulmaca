@@ -9,7 +9,6 @@ class XpEngine {
 
   static final XpEngine instance = XpEngine._();
 
-  /// Kayıtlı XP kuralları. Yeni kural eklemek için listeye eklemek yeterlidir.
   final List<XpRule<XpEvent>> _rules = const [
     CityFoundXpRule(),
     ComboXpRule(),
@@ -17,6 +16,7 @@ class XpEngine {
     AchievementUnlockedXpRule(),
     LeaderboardBonusXpRule(),
     DailyStreakXpRule(),
+    DailyMissionCompletedXpRule(),
   ];
 
   /// Gelen bir [XpEvent]'i kurallar süzgecinden geçirerek XP miktarını ve açıklamasını döner.
